@@ -250,7 +250,7 @@ Login, trả JWT.
 (Bearer) update name/streamUrl...
 - Req:
 ```json
-{ "name": "Light 1", "streamUrl": "" }
+{ "name": "Light 1", "streamUrl": "" } // cân nhắc việc FE stream trực tiếp.
 ```
 - Res: `Device`
 
@@ -284,7 +284,7 @@ Side effects (khuyến nghị):
   - topic đề xuất: `homes/{homeId}/rooms/{roomId}/devices/{deviceId}/command`
   - payload: `{ deviceId, action, speed?, time, creator }`
 
-## 7) Camera
+## 7) Camera (mục này có vẻ không cần nữa)
 
 ### POST `/api/cameras/:id/human-detection`
 (Bearer)
