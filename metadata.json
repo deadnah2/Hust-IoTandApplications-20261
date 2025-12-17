@@ -1,0 +1,7 @@
+{
+  "name": "SmartHome IoT Dashboard",
+  "description": "A modern React Smart Home dashboard with mock data capabilities, managing homes, rooms, and devices.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
