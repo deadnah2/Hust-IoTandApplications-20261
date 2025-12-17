@@ -77,13 +77,14 @@ export const api = {
       }
       return (await client.post("/api/rooms", data)).data;
     },
-    delete: async (id: string) => {
+    delete: async (id: string, homeId?: string) => {
       if (USE_MOCK) {
         MockDB.rooms = MockDB.rooms.filter(r => r.id !== id);
         MockDB.addLog(`Room deleted: ${id}`, "WARNING");
         return mockCall(true);
       }
-      return (await client.delete(`/api/rooms/${id}`)).data;
+      const qs = homeId ? `?homeId=${encodeURIComponent(homeId)}` : "";
+      return (await client.delete(`/api/rooms/${id}${qs}`)).data;
     }
   },
 
