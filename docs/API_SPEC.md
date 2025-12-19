@@ -71,7 +71,7 @@ Index: `homeId`.
 ```ts
 {
   _id: ObjectId,
-  roomId: ObjectId,        // ref rooms
+  roomId?: ObjectId,        // ref rooms
   name: string,
   type: "LIGHT" | "FAN" | "CAMERA",
   status: "ON" | "OFF",
