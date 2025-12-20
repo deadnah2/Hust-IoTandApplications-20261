@@ -1,5 +1,4 @@
 import { House, Room, Device, User, ActivityLog } from "../types";
-import { v4 as uuidv4 } from "uuid"; // Using simple random string generator if uuid not available, but for now simple Math.random
 const genId = () => Math.random().toString(36).substr(2, 9);
 
 // --- SEED DATA ---
