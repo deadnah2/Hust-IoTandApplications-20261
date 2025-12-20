@@ -11,6 +11,7 @@ from app.models.session import Session
 from app.models.home import Home
 from app.models.room import Room
 from app.models.device import Device
+from app.models.activity_log import ActivityLog
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,7 +24,8 @@ async def lifespan(app: FastAPI):
             Session,
             Home,
             Room,
-            Device
+            Device,
+            ActivityLog
         ],
     )
     yield

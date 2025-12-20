@@ -1,12 +1,11 @@
-from beanie import Document, Link
+from beanie import Document, PydanticObjectId, Indexed
 from datetime import datetime
-from app.models.user import User
 
 class Session(Document):
-    user: Link[User]
-    resetToken: str
-    expires_at: datetime
-    created_at: datetime = datetime.utcnow()
+    userId: PydanticObjectId
+    refreshToken: Indexed(str, unique=True)
+    expiresAt: datetime
+    createdAt: datetime = datetime.utcnow()
 
     class Settings:
         name = "sessions"

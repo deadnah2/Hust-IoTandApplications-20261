@@ -1,26 +1,35 @@
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional
 from datetime import datetime
+from app.models.device import DeviceType, DeviceStatus
 
-class DeviceBase(BaseModel):
+class DeviceCreate(BaseModel):
+    roomId: str
     name: str
-    type: str
-    status: Optional[str] = "offline"
-    data: Optional[Dict[str, Any]] = {}
+    type: DeviceType
 
-class DeviceCreate(DeviceBase):
-    room_id: str
-
-class DeviceUpdate(DeviceBase):
+class DeviceUpdate(BaseModel):
     name: Optional[str] = None
-    type: Optional[str] = None
-    room_id: Optional[str] = None
+    streamUrl: Optional[str] = None
 
-class DeviceResponse(DeviceBase):
+class DeviceCommand(BaseModel):
+    action: str # ON, OFF, SET_SPEED
+    speed: Optional[int] = None
+
+class HumanDetectionCommand(BaseModel):
+    enabled: bool
+
+class DeviceResponse(BaseModel):
     id: str
-    room_id: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    roomId: Optional[str] = None
+    name: str
+    controllerDeviceMAC: Optional[str] = None
+    bssid: Optional[str] = None
+    type: DeviceType
+    status: DeviceStatus
+    speed: Optional[int] = None
+    streamUrl: Optional[str] = None
+    humanDetectionEnabled: Optional[bool] = None
+    createdAt: datetime
+    updatedAt: datetime
 
-    class Config:
-        from_attributes = True

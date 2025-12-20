@@ -1,13 +1,12 @@
-from beanie import Document, Link
+from beanie import Document, PydanticObjectId
 from typing import Optional
 from datetime import datetime
-from app.models.home import Home
 
 class Room(Document):
+    homeId: PydanticObjectId
     name: str
-    home: Link[Home]
-    description: Optional[str] = None
-    created_at: datetime = datetime.utcnow()
+    createdAt: datetime = datetime.utcnow()
+    updatedAt: datetime = datetime.utcnow()
 
     class Settings:
         name = "rooms"
