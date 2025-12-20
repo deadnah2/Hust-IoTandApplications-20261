@@ -5,7 +5,6 @@ import {
   Typography,
   IconButton,
   Chip,
-  Avatar,
   Menu,
   MenuItem,
   Drawer,
