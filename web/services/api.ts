@@ -94,7 +94,18 @@ export const api = {
     },
     create: async (data: Partial<Device>): Promise<Device> => {
       if (USE_MOCK) {
-        const newDevice = { ...data, id: Math.random().toString(), status: "OFF", speed: 0 } as Device;
+        const newDevice = { 
+          ...data, 
+          id: Math.random().toString(), 
+          status: "ON", 
+          speed: 0 
+        } as Device;
+        
+        if (data.type === "SENSOR") {
+          newDevice.temperature = 25 + Math.floor(Math.random() * 5);
+          newDevice.humidity = 50 + Math.floor(Math.random() * 20);
+        }
+
         MockDB.devices.push(newDevice);
         MockDB.addLog(`Device installed: ${newDevice.name}`);
         return mockCall(newDevice);

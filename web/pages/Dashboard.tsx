@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Typography, Button, Tabs, Tab, Box, Dialog, DialogTitle,
@@ -18,9 +18,9 @@ import { createRoomSchema, createDeviceSchema, Device } from "../types";
 // --- Sub-components for Tabs ---
 
 const DevicesTab = ({
-    devices, isLoading, onToggle, onSpeed, onDelete, onViewCamera
+    devices, isLoading, onToggle, onSpeed, onDelete, onViewCamera, onToggleDetection, onShowRecordings
 }: {
-    devices: Device[], isLoading: boolean, onToggle: any, onSpeed: any, onDelete: any, onViewCamera: any
+    devices: Device[], isLoading: boolean, onToggle: any, onSpeed: any, onDelete: any, onViewCamera: any, onToggleDetection: any, onShowRecordings: any
 }) => {
     if (isLoading) return <Box className="flex justify-center p-10"><CircularProgress /></Box>;
     if (devices.length === 0) return <Alert severity="info">No devices in this room. Add one!</Alert>;
@@ -35,6 +35,8 @@ const DevicesTab = ({
                     onSpeedChange={onSpeed}
                     onDelete={onDelete}
                     onViewCamera={onViewCamera}
+                    onToggleDetection={onToggleDetection}
+                    onShowRecordings={onShowRecordings}
                 />
             ))}
         </div>
@@ -208,6 +210,8 @@ export const Dashboard = () => {
                     onSpeed={handleSpeed}
                     onDelete={handleDelete}
                     onViewCamera={handleViewCamera}
+                    onToggleDetection={handleDetection}
+                    onShowRecordings={handleShowRecordings}
                 />
             )}
 
@@ -255,6 +259,7 @@ export const Dashboard = () => {
                                 <MenuItem value="LIGHT">Light</MenuItem>
                                 <MenuItem value="FAN">Fan</MenuItem>
                                 <MenuItem value="CAMERA">Camera</MenuItem>
+                                <MenuItem value="SENSOR">Sensor (Temp/Hum)</MenuItem>
                             </Select>
                         </FormControl>
                     </DialogContent>
