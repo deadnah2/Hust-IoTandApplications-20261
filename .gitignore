@@ -47,3 +47,7 @@ build/
 
 # MongoDB
 data/db/
+
+# Bỏ qua dữ liệu của MQTT Mosquitto
+mqtt/data/
+*.db
