@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { TextField, Button, Paper, Typography, Tabs, Tab, Box, Alert } from "@mui/material";
+import { TextField, Button, Paper, Typography, Tabs, Tab, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { loginSchema, registerSchema } from "../types";

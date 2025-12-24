@@ -3,23 +3,24 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Typography, Button, Tabs, Tab, Box, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Select, MenuItem,
-  FormControl, InputLabel, Alert, CircularProgress,
-  List, ListItem, ListItemText, ListItemButton
+  FormControl, InputLabel, Alert, CircularProgress
 } from "@mui/material";
-import { Add, Refresh, History as HistoryIcon, FiberManualRecord } from "@mui/icons-material";
+import { Add, Refresh } from "@mui/icons-material";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "../services/api";
 import { Layout } from "../components/Layout";
 import { DeviceCard } from "../components/DeviceCard";
+import { CameraViewerDialog } from "../components/CameraViewerDialog";
+import { RecordingsDialog } from "../components/RecordingsDialog";
 import { createRoomSchema, createDeviceSchema, Device } from "../types";
 
 // --- Sub-components for Tabs ---
 
 const DevicesTab = ({
-    devices, isLoading, onToggle, onSpeed, onDelete, onViewCamera
+    devices, isLoading, onToggle, onSpeed, onDelete, onViewCamera, onToggleDetection, onShowRecordings
 }: {
-    devices: Device[], isLoading: boolean, onToggle: any, onSpeed: any, onDelete: any, onViewCamera: any
+    devices: Device[], isLoading: boolean, onToggle: any, onSpeed: any, onDelete: any, onViewCamera: any, onToggleDetection: any, onShowRecordings: any
 }) => {
     if (isLoading) return <Box className="flex justify-center p-10"><CircularProgress /></Box>;
     if (devices.length === 0) return <Alert severity="info">No devices in this room. Add one!</Alert>;
@@ -34,75 +35,10 @@ const DevicesTab = ({
                     onSpeedChange={onSpeed}
                     onDelete={onDelete}
                     onViewCamera={onViewCamera}
+                    onToggleDetection={onToggleDetection}
+                    onShowRecordings={onShowRecordings}
                 />
             ))}
-        </div>
-    );
-};
-
-const CamerasTab = ({ devices }: { devices: Device[] }) => {
-    const cameras = devices.filter(d => d.type === "CAMERA");
-    const [selectedCam, setSelectedCam] = useState<string | null>(cameras[0]?.id || null);
-    const queryClient = useQueryClient();
-
-    const detectionMutation = useMutation({
-        mutationFn: ({id, enabled}: {id: string, enabled: boolean}) => api.devices.toggleHumanDetection(id, enabled),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] })
-    });
-
-    if (cameras.length === 0) return <Alert severity="warning">No cameras installed in this room.</Alert>;
-
-    const activeCamera = cameras.find(c => c.id === selectedCam) || cameras[0];
-
-    return (
-        <div className="flex flex-col md:flex-row gap-4 h-[600px]">
-            {/* List */}
-            <div className="w-full md:w-1/4 bg-white rounded-lg shadow overflow-hidden">
-                <Typography variant="subtitle2" className="p-3 bg-gray-100 font-bold text-gray-600">Camera List</Typography>
-                <List>
-                    {cameras.map(c => (
-                        <ListItem
-                            key={c.id}
-                            disablePadding
-                        >
-                            <ListItemButton
-                                selected={activeCamera.id === c.id}
-                                onClick={() => setSelectedCam(c.id)}
-                            >
-                                <ListItemText primary={c.name} secondary={c.status} />
-                                {c.status === "ON" && <FiberManualRecord className="text-red-500 text-xs" fontSize="small" />}
-                            </ListItemButton>
-                        </ListItem>
-                    ))}
-                </List>
-            </div>
-
-            {/* Viewport */}
-            <div className="flex-1 bg-black rounded-lg flex flex-col overflow-hidden relative">
-                <div className="flex-1 relative">
-                    <img src={`https://picsum.photos/800/600?random=${activeCamera.id}`} className="w-full h-full object-cover opacity-80" alt="Live Stream" />
-                    <div className="absolute top-4 left-4 bg-red-600 text-white text-xs px-2 py-1 rounded animate-pulse">
-                        LIVE
-                    </div>
-                </div>
-                <div className="bg-gray-900 p-4 flex justify-between items-center">
-                    <Typography className="text-white">{activeCamera.name}</Typography>
-                    <div className="flex gap-2">
-                         <Button
-                            variant={activeCamera.humanDetectionEnabled ? "contained" : "outlined"}
-                            color={activeCamera.humanDetectionEnabled ? "error" : "primary"}
-                            size="small"
-                            onClick={() => detectionMutation.mutate({
-                                id: activeCamera.id,
-                                enabled: !activeCamera.humanDetectionEnabled
-                            })}
-                        >
-                            Human Detection: {activeCamera.humanDetectionEnabled ? "ON" : "OFF"}
-                        </Button>
-                        <Button variant="outlined" color="info" size="small">Recordings</Button>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };
@@ -145,6 +81,9 @@ export const Dashboard = () => {
     // Dialog States
     const [isAddRoomOpen, setAddRoomOpen] = useState(false);
     const [isAddDeviceOpen, setAddDeviceOpen] = useState(false);
+    const [isCameraViewerOpen, setCameraViewerOpen] = useState(false);
+    const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
+    const [recordingsTarget, setRecordingsTarget] = useState<Device | null>(null);
 
     // Queries
     const { data: houses = [] } = useQuery({ queryKey: ['houses'], queryFn: api.homes.list });
@@ -182,6 +121,12 @@ export const Dashboard = () => {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] })
     });
 
+    const detectionMutation = useMutation({
+        mutationFn: (vars: { id: string, enabled: boolean }) =>
+            api.devices.toggleHumanDetection(vars.id, vars.enabled),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] })
+    });
+
     const deleteDeviceMutation = useMutation({
         mutationFn: api.devices.delete,
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] })
@@ -209,10 +154,20 @@ export const Dashboard = () => {
 
     const handleToggle = (id: string, state: boolean) => toggleMutation.mutate({ id, state });
     const handleSpeed = (id: string, speed: number) => speedMutation.mutate({ id, speed });
+    const handleDetection = (id: string, enabled: boolean) => detectionMutation.mutate({ id, enabled });
     const handleDelete = (id: string) => deleteDeviceMutation.mutate(id);
-    const handleViewCamera = (id: string) => setTabIndex(1); // Switch to camera tab
+
+    const handleViewCamera = (id: string) => {
+        setActiveCameraId(id);
+        setCameraViewerOpen(true);
+    };
+
+    const handleShowRecordings = (device: Device) => {
+        setRecordingsTarget(device);
+    };
 
     const selectedRoomName = rooms.find(r => r.id === selectedRoomId)?.name || "Select a Room";
+    const roomCameras = devices.filter(d => d.type === "CAMERA");
 
     return (
         <Layout
@@ -243,7 +198,6 @@ export const Dashboard = () => {
             <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
                 <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)}>
                     <Tab label="Devices" />
-                    <Tab label="Cameras" />
                     <Tab label="Activity" />
                 </Tabs>
             </Box>
@@ -256,14 +210,30 @@ export const Dashboard = () => {
                     onSpeed={handleSpeed}
                     onDelete={handleDelete}
                     onViewCamera={handleViewCamera}
+                    onToggleDetection={handleDetection}
+                    onShowRecordings={handleShowRecordings}
                 />
             )}
 
-            {tabIndex === 1 && <CamerasTab devices={devices} />}
+            {tabIndex === 1 && <ActivityTab />}
 
-            {tabIndex === 2 && <ActivityTab />}
+            {/* --- Modals & Overlays --- */}
 
-            {/* --- Modals --- */}
+            <CameraViewerDialog
+                open={isCameraViewerOpen}
+                onClose={() => setCameraViewerOpen(false)}
+                cameras={roomCameras}
+                initialCameraId={activeCameraId}
+                onToggleRecording={handleToggle}
+                onToggleDetection={handleDetection}
+                onShowRecordings={handleShowRecordings}
+            />
+
+            <RecordingsDialog
+              open={!!recordingsTarget}
+              onClose={() => setRecordingsTarget(null)}
+              deviceName={recordingsTarget?.name || ""}
+            />
 
             <Dialog open={isAddRoomOpen} onClose={() => setAddRoomOpen(false)}>
                 <form onSubmit={subRoom((d: any) => addRoomMutation.mutate(d.name))}>
@@ -289,6 +259,7 @@ export const Dashboard = () => {
                                 <MenuItem value="LIGHT">Light</MenuItem>
                                 <MenuItem value="FAN">Fan</MenuItem>
                                 <MenuItem value="CAMERA">Camera</MenuItem>
+                                <MenuItem value="SENSOR">Sensor (Temp/Hum)</MenuItem>
                             </Select>
                         </FormControl>
                     </DialogContent>

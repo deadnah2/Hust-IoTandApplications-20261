@@ -1,5 +1,4 @@
 import { House, Room, Device, User, ActivityLog } from "../types";
-import { v4 as uuidv4 } from "uuid"; // Using simple random string generator if uuid not available, but for now simple Math.random
 const genId = () => Math.random().toString(36).substr(2, 9);
 
 // --- SEED DATA ---
@@ -13,9 +12,18 @@ const devices: Device[] = [
   // Room 1: Camera + Light
   { id: "d1", roomId: "r1", name: "Main Camera", type: "CAMERA", status: "ON", streamUrl: "", humanDetectionEnabled: false },
   { id: "d2", roomId: "r1", name: "Ceiling Light", type: "LIGHT", status: "OFF" },
-  // Room 2: Fan + Light
+  // Room 2: Fan + Light + Sensor
   { id: "d3", roomId: "r2", name: "Stand Fan", type: "FAN", status: "OFF", speed: 0 },
   { id: "d4", roomId: "r2", name: "Night Light", type: "LIGHT", status: "ON" },
+  { 
+    id: "d5", 
+    roomId: "r2", 
+    name: "Climate Sensor", 
+    type: "SENSOR", 
+    status: "ON", 
+    temperature: 24.5, 
+    humidity: 62 
+  },
 ];
 
 let activityLogs: ActivityLog[] = [

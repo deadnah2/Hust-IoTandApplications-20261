@@ -16,7 +16,7 @@ export interface Room {
   name: string;
 }
 
-export type DeviceType = "LIGHT" | "FAN" | "CAMERA";
+export type DeviceType = "LIGHT" | "FAN" | "CAMERA" | "SENSOR";
 export type DeviceStatus = "ON" | "OFF";
 
 export interface Device {
@@ -28,6 +28,8 @@ export interface Device {
   speed?: number; // 0-3 for FAN
   streamUrl?: string; // For CAMERA
   humanDetectionEnabled?: boolean; // For CAMERA
+  temperature?: number; // For SENSOR (°C)
+  humidity?: number; // For SENSOR (%)
 }
 
 export interface ActivityLog {
@@ -62,5 +64,5 @@ export const createRoomSchema = z.object({
 
 export const createDeviceSchema = z.object({
   name: z.string().min(1, "Device name is required"),
-  type: z.enum(["LIGHT", "FAN", "CAMERA"]),
+  type: z.enum(["LIGHT", "FAN", "CAMERA", "SENSOR"]),
 });
