@@ -1,12 +1,13 @@
-from beanie import Document, PydanticObjectId
+from beanie import Document, PydanticObjectId, Indexed
 from typing import Optional
 from datetime import datetime
+from pydantic import Field
 
 class Room(Document):
-    homeId: PydanticObjectId
+    homeId: Indexed(PydanticObjectId)
     name: str
-    createdAt: datetime = datetime.utcnow()
-    updatedAt: datetime = datetime.utcnow()
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(default_factory=datetime.utcnow)
 
     class Settings:
         name = "rooms"

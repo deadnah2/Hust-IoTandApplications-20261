@@ -5,3 +5,4 @@ pydantic-settings
 python-dotenv
 motor
 beanie
+python-jose[cryptography]

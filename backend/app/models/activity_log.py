@@ -1,7 +1,8 @@
-from beanie import Document, PydanticObjectId
+from beanie import Document, PydanticObjectId, Indexed
 from typing import Optional
 from datetime import datetime
 from enum import Enum
+from pydantic import Field
 
 class LogType(str, Enum):
     INFO = "INFO"
@@ -11,11 +12,11 @@ class LogType(str, Enum):
 class ActivityLog(Document):
     userId: Optional[PydanticObjectId] = None
     homeId: Optional[PydanticObjectId] = None
-    roomId: Optional[PydanticObjectId] = None
-    deviceId: Optional[PydanticObjectId] = None
-    type: LogType
+    roomId: Optional[Indexed(PydanticObjectId)] = None
+    deviceId: Optional[Indexed(PydanticObjectId)] = None
+    type: str
     message: str
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
     class Settings:
         name = "activity_logs"

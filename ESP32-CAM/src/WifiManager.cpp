@@ -30,7 +30,7 @@ const char* htmlPage = R"rawliteral(
 </html>
 )rawliteral";
 
-WifiManager::WifiManager(ConfigManager &mgr) : configManager(mgr), server(80), connected(false) {}
+WifiManager::WifiManager(ConfigManager &mgr) : configManager(mgr), server(8080), connected(false) {}
 
 void WifiManager::begin() { // 
     // 1. Enable both AP and STA
@@ -70,7 +70,7 @@ void WifiManager::setupAP() {
     IPAddress IP = WiFi.softAPIP();
     Serial.print("AP IP address: ");
     Serial.println(IP);
-    // Default IP is usually 192.168.4.1
+    Serial.println("Config Page: http://192.168.4.1:8080");
 }
 
 bool WifiManager::connectToWifi(const AppConfig &config) {
@@ -113,6 +113,13 @@ void WifiManager::handleSave() {
         config.mqtt_pass = server.arg("mqtt_pass");
         
         Serial.println("Received new config via Web.");
+
+        Serial.println("ssid: " + config.wifi_ssid);
+        Serial.println("pass: " + config.wifi_pass);
+        Serial.println("mqtt_server: " + config.mqtt_server);
+        Serial.println("mqtt_port: " + String(config.mqtt_port));
+        Serial.println("mqtt_user: " + config.mqtt_user);
+        Serial.println("mqtt_pass: " + config.mqtt_pass);
         
         // Try to connect first
         if (connectToWifi(config)) {

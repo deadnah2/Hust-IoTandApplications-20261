@@ -7,13 +7,13 @@ class UserLogin(BaseModel):
     password: str
 
 class UserRegister(BaseModel):
-    login: str
+    username: str
     email: Optional[EmailStr] = None
     password: str
 
 class UserResponse(BaseModel):
     id: str
-    login: str
+    username: str
     email: Optional[str] = None
 
 class Token(BaseModel):

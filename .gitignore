@@ -50,4 +50,5 @@ data/db/
 
 # Bỏ qua dữ liệu của MQTT Mosquitto
 mqtt/data/
+mqtt/log/
 *.db
