@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, homes, rooms, devices, cameras
+from app.api.endpoints import auth, homes, rooms, devices
 
 api_router = APIRouter()
 api_router.include_router(auth.router, tags=["auth"])

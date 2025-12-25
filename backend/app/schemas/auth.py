@@ -17,7 +17,7 @@ class UserResponse(BaseModel):
     email: Optional[str] = None
 
 class Token(BaseModel):
-    id_token: str
+    access_token: str
     refresh_token: str
     user: Optional[UserResponse] = None
 

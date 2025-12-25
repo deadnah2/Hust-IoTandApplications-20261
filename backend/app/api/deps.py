@@ -7,6 +7,8 @@ from app.models.user import User
 from app.core.config import settings
 from app.core import security
 
+# deps.py dùng để xử lý các logic lặp đi lặp lại
+
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/authenticate"
 )
@@ -18,10 +20,13 @@ async def get_current_user(token: str = Depends(reusable_oauth2)) -> User:
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         token_data = payload.get("sub")
+        if token_data is None:
+            raise JWTError()
     except (JWTError, ValidationError):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     user = await User.get(token_data)
     if not user:

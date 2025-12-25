@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt, JWTError
+from fastapi import HTTPException, status # Thêm dòng này
 from app.core import security
 from app.core.config import settings
 from app.models.session import Session
@@ -25,11 +26,17 @@ class AuthService:
         """
         existing_user = await User.find_one(User.username == user_in.username)
         if existing_user:
-            raise Exception("Username already registered")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Username already registered"
+            )
         if user_in.email:
             existing_email = await User.find_one(User.email == user_in.email)
             if existing_email:
-                raise Exception("Email already registered")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Email already registered"
+                )
 
         hashed_password = security.get_password_hash(user_in.password)
         user = User(

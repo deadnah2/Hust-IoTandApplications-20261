@@ -1,36 +1,88 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from app.schemas.auth import UserRegister, UserResponse, Token, RefreshTokenRequest
+from fastapi import APIRouter, Depends, HTTPException, status, Response
+from starlette.responses import JSONResponse # Sửa dòng này
+from app.schemas.auth import (
+    UserRegister,
+    UserResponse,
+    Token,
+    RefreshTokenRequest,
+    UserLogin,
+)
 from app.api import deps
 from app.models.user import User
+from app.services.auth import AuthService
 
 router = APIRouter()
 
-@router.post("/register", response_model=UserResponse)
+# Decorator đã chỉ ra response_model ==> Lấy các trường cần thiết, tự động gói vào một JSONResponse
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_in: UserRegister):
-    # TODO: Check if user exists
-    # TODO: Hash password
-    # TODO: Create user in DB
-    pass
+    """
+    Register a new user.
+    """
+    try:
+        user = await AuthService.register_user(user_in)
+        # Ép kiểu ObjectId về str trước khi trả về để khớp với UserResponse schema
+        return UserResponse(**user.dict(exclude={'id'}), id=str(user.id))
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, # For unexpected errors
+            detail="An unexpected error occurred during registration."
+        )
+
 
 @router.post("/authenticate", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # TODO: Authenticate user
-    # TODO: Create access token & refresh token
-    # TODO: Save session
-    pass
+async def login(user_in: UserLogin):
+    """
+    Authenticate user and return tokens.
+    """
+    user = await AuthService.authenticate_user(
+        username=user_in.username, password=user_in.password
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token, refresh_token = await AuthService.create_tokens(user)
+    return Token(
+        access_token=access_token, 
+        refresh_token=refresh_token, 
+        user=UserResponse(**user.dict(exclude={'id'}), id=str(user.id))
+    )
+
 
 @router.post("/refresh-token", response_model=Token)
 async def refresh_token(request: RefreshTokenRequest):
-    # TODO: Verify refresh token
-    # TODO: Rotate tokens
-    pass
+    """
+    Refresh access token.
+    """
+    new_access_token = await AuthService.refresh_access_token(request.refreshToken)
+    if not new_access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+    return Token(access_token=new_access_token, refresh_token=request.refreshToken)
 
-@router.post("/logout")
+# gửi refresh token về server giúp duy trì nhiều phiên đăng nhập
+@router.post("/logout", status_code=status.HTTP_200_OK)
 async def logout(request: RefreshTokenRequest):
-    # TODO: Delete session
-    pass
+    """
+    Logout user by deleting session.
+    """
+    await AuthService.logout(request.refreshToken)
+    return {"message": "Logged out successfully"}
 
+# Lấy access token từ header ==> giải mã ra current_user ==> trả về chính đối tượng này
 @router.get("/me", response_model=UserResponse)
 async def read_users_me(current_user: User = Depends(deps.get_current_user)):
-    return current_user
+    """
+    Get current user.
+    """
+    return UserResponse(**current_user.dict(exclude={'id'}), id=str(current_user.id))
