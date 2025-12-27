@@ -1,19 +1,28 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from app.models.device import DeviceType, DeviceStatus
+from app.models.device import DeviceType, DeviceState
+
+class NewDeviceInLAN(BaseModel):
+    bssid: str
 
 class DeviceCreate(BaseModel):
-    roomId: str
+    roomId: Optional[str] = None
     name: str
+    custom_name: Optional[str] = ""
+    controllerMAC: Optional[str] = None
+    bssid: str
     type: DeviceType
+    speed: Optional[int] = 0
+    streamUrl: Optional[str] = None
+    humanDetectionEnabled: Optional[bool] = False
 
 class DeviceUpdate(BaseModel):
-    name: Optional[str] = None
-    streamUrl: Optional[str] = None
+    custom_name: Optional[str] = None
+    roomId: Optional[str] = None
 
 class DeviceCommand(BaseModel):
-    action: str # ON, OFF, SET_SPEED
+    action: str  # ON, OFF, SET_SPEED
     speed: Optional[int] = None
 
 class HumanDetectionCommand(BaseModel):
@@ -23,10 +32,11 @@ class DeviceResponse(BaseModel):
     id: str
     roomId: Optional[str] = None
     name: str
-    controllerDeviceMAC: Optional[str] = None
+    custom_name: str
+    controllerMAC: Optional[str] = None
     bssid: Optional[str] = None
     type: DeviceType
-    status: DeviceStatus
+    status: DeviceState
     speed: Optional[int] = None
     streamUrl: Optional[str] = None
     humanDetectionEnabled: Optional[bool] = None

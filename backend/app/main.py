@@ -5,44 +5,20 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from motor.motor_asyncio import AsyncIOMotorClient
-from beanie import init_beanie
 
 from app.core.config import settings
+from app.core.lifespan import lifespan
 from app.api.api import api_router
-from app.models.user import User
-from app.models.session import Session
-from app.models.home import Home
-from app.models.room import Room
-from app.models.device import Device
-from app.models.activity_log import ActivityLog
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    client = AsyncIOMotorClient(settings.MONGODB_URL)
-    await init_beanie(
-        database=client[settings.MONGO_DATABASE_NAME],
-        document_models=[
-            User,
-            Session,
-            Home,
-            Room,
-            Device,
-            ActivityLog
-        ],
-    )
-    yield
-    # Shutdown
-
+# Khởi tạo FastAPI app
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan
 )
 
-# Set all CORS enabled origins
+
+# Cấu hình CORS
 if settings.CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
@@ -52,7 +28,7 @@ if settings.CORS_ORIGINS:
         allow_headers=["*"],
     )
 
-# Nhóm các api lại dưới 
+# Đăng ký router
 app.include_router(api_router, prefix=settings.API_V1_STR) 
 
 @app.get("/")
