@@ -1,4 +1,5 @@
 #include "WifiManager.h"
+#include <map>
 
 // HTML Page for Configuration
 const char* htmlPage = R"rawliteral(
@@ -32,6 +33,43 @@ const char* htmlPage = R"rawliteral(
 
 WifiManager::WifiManager(ConfigManager &mgr) : configManager(mgr), server(8080), connected(false) {}
 
+// Hàm giải mã HTML entity về Unicode cho SSID
+String decodeHtmlEntities(const String &input) {
+    String output = "";
+    int len = input.length();
+    for (int i = 0; i < len; ++i) {
+        if (input[i] == '&' && i + 1 < len && input[i+1] == '#') {
+            int j = i + 2;
+            String num = "";
+            while (j < len && isDigit(input[j])) {
+                num += input[j];
+                ++j;
+            }
+            if (j < len && input[j] == ';' && num.length() > 0) {
+                uint16_t code = num.toInt();
+                output += (char)0; // placeholder for UTF-8
+                if (code < 128) {
+                    output.setCharAt(output.length()-1, (char)code);
+                } else if (code < 2048) {
+                    output.remove(output.length()-1);
+                    output += (char)(192 | (code >> 6));
+                    output += (char)(128 | (code & 63));
+                } else {
+                    output.remove(output.length()-1);
+                    output += (char)(224 | (code >> 12));
+                    output += (char)(128 | ((code >> 6) & 63));
+                    output += (char)(128 | (code & 63));
+                }
+                i = j;
+            } else {
+                output += input[i];
+            }
+        } else {
+            output += input[i];
+        }
+    }
+    return output;
+}
 void WifiManager::begin() { // 
     // 1. Enable both AP and STA
     WiFi.mode(WIFI_AP_STA);
@@ -105,7 +143,8 @@ void WifiManager::handleRoot() {
 void WifiManager::handleSave() {
     if (server.hasArg("ssid") && server.hasArg("mqtt_server")) {
         AppConfig config;
-        config.wifi_ssid = server.arg("ssid");
+        // Giải mã SSID từ HTML entity
+        config.wifi_ssid = decodeHtmlEntities(server.arg("ssid"));
         config.wifi_pass = server.arg("pass");
         config.mqtt_server = server.arg("mqtt_server");
         config.mqtt_port = server.arg("mqtt_port").toInt();
