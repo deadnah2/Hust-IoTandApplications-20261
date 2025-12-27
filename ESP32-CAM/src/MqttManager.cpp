@@ -51,9 +51,9 @@ void MqttManager::reconnect() {
             Serial.println("Subscribed to: " + controlTopic);
 
             // Publish device/new for Camera
-            publishDeviceNew("Cam", WiFi.BSSIDstr(), deviceMac, "online");
+            publishDeviceNew("CAMERA", WiFi.BSSIDstr(), deviceMac, "online");
             // Publish device/new for Light (Flash)
-            publishDeviceNew("Light", WiFi.BSSIDstr(), deviceMac, "online");
+            publishDeviceNew("LIGHT", WiFi.BSSIDstr(), deviceMac, "online");
 
         } else {
             Serial.print("failed, rc=");
@@ -82,15 +82,17 @@ bool MqttManager::isConnected() {
     return client.connected();
 }
 
-void MqttManager::publishDeviceNew(String type, String bssid, String mac, String status) {
+void MqttManager::publishDeviceNew(String type, String bssid, String mac, String state) {
     StaticJsonDocument<200> doc;
     doc["type"] = type;
     doc["bssid"] = bssid;
-    doc["controllerDeviceMAC"] = mac;
-    doc["status"] = status;
+    doc["controllerMAC"] = mac;
+    doc["state"] = state;
 
     char buffer[256];
     serializeJson(doc, buffer);
+
+    Serial.println(buffer);
     
     client.publish("device/new", buffer);
 }

@@ -8,12 +8,12 @@ client = mqtt.Client()
 # Callback khi kết nối thành công
 def on_connect(client, userdata, flags, rc):
     print("Connected to MQTT Broker!")
-    client.subscribe("/device/new")
+    client.subscribe("device/new")
 
 # Callback khi nhận được message
 def on_message(client, userdata, msg):
     print("Received message: ", msg.topic, msg.payload.decode())
-    if msg.topic == "/device/new":
+    if msg.topic == "device/new":
         add_device(msg.payload.decode())
 
 # Gán callbacks
