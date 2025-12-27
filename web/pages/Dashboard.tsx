@@ -423,21 +423,43 @@ export const Dashboard = () => {
             <Dialog open={isAddDeviceOpen} onClose={() => setAddDeviceOpen(false)}>
                 <form onSubmit={subDev((d) => addDeviceMutation.mutate(d))}>
                     <DialogTitle>Add Device</DialogTitle>
-                    <DialogContent className="flex flex-col gap-4 min-w-[300px] pt-4">
-                        <TextField label="Device Name" fullWidth variant="outlined" {...regDev("name")} />
+                    <DialogContent className="flex flex-col gap-4 min-w-[350px] pt-4">
+                        <TextField 
+                            label="Device Name" 
+                            fullWidth 
+                            variant="outlined" 
+                            placeholder="e.g., Living Room Light"
+                            {...regDev("name")} 
+                        />
+                        <TextField 
+                            label="BSSID (WiFi MAC)" 
+                            fullWidth 
+                            variant="outlined" 
+                            placeholder="AA:BB:CC:DD:EE:FF"
+                            {...regDev("bssid")} 
+                        />
+                        <TextField 
+                            label="Controller MAC (Optional)" 
+                            fullWidth 
+                            variant="outlined" 
+                            placeholder="11:22:33:44:55:66"
+                            {...regDev("controllerMAC")} 
+                        />
                         <FormControl fullWidth>
                             <InputLabel>Type</InputLabel>
                             <Select label="Type" defaultValue="LIGHT" {...regDev("type")}>
-                                <MenuItem value="LIGHT">Light</MenuItem>
-                                <MenuItem value="FAN">Fan</MenuItem>
-                                <MenuItem value="CAMERA">Camera</MenuItem>
-                                <MenuItem value="SENSOR">Sensor (Temp/Hum)</MenuItem>
+                                <MenuItem value="LIGHT">💡 Light</MenuItem>
+                                <MenuItem value="FAN">🌀 Fan</MenuItem>
+                                <MenuItem value="CAMERA">📷 Camera</MenuItem>
+                                <MenuItem value="SENSOR">🌡️ Sensor (Temp/Hum)</MenuItem>
                             </Select>
                         </FormControl>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setAddDeviceOpen(false)}>Cancel</Button>
-                        <Button type="submit" variant="contained">Add</Button>
+                        <Button type="submit" variant="contained" disabled={addDeviceMutation.isPending}>
+                            {addDeviceMutation.isPending ? "Adding..." : "Add Device"}
+                        </Button>
                     </DialogActions>
                 </form>
             </Dialog>

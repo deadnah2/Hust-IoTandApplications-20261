@@ -26,8 +26,11 @@ export type DeviceStatus = "ON" | "OFF";
 
 export interface Device {
   id: string;
-  roomId: string;
+  roomId: string | null;
   name: string;
+  custom_name?: string;
+  controllerMAC?: string;
+  bssid?: string;
   type: DeviceType;
   status: DeviceStatus;
   speed?: number; // 0-3 for FAN
@@ -35,6 +38,8 @@ export interface Device {
   humanDetectionEnabled?: boolean; // For CAMERA
   temperature?: number; // For SENSOR (°C)
   humidity?: number; // For SENSOR (%)
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ActivityLog {
@@ -76,4 +81,6 @@ export const createRoomSchema = z.object({
 export const createDeviceSchema = z.object({
   name: z.string().min(1, "Device name is required"),
   type: z.enum(["LIGHT", "FAN", "CAMERA", "SENSOR"]),
+  bssid: z.string().min(1, "BSSID is required"),
+  controllerMAC: z.string().optional(),
 });

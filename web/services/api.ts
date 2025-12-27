@@ -100,7 +100,7 @@ export const api = {
       if (USE_MOCK || USE_MOCK_DEVICES) return mockCall(MockDB.devices.filter(d => d.roomId === roomId));
       return (await client.get(`/devices?roomId=${roomId}`)).data;
     },
-    create: async (data: Partial<Device>): Promise<Device> => {
+    create: async (data: Partial<Device> & { roomId?: string; bssid: string }): Promise<Device> => {
       if (USE_MOCK || USE_MOCK_DEVICES) {
         const newDevice = { 
           ...data, 
@@ -154,7 +154,8 @@ export const api = {
          }
          return mockCall(dev);
       }
-      throw new Error("Human detection API is not implemented on backend yet");
+      // BE chưa có endpoint riêng cho human detection, dùng update
+      return (await client.put(`/devices/${id}`, { humanDetectionEnabled: enabled })).data;
     }
   },
 
