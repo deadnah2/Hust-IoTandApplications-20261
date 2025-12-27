@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Typography, Button, Tabs, Tab, Box, Dialog, DialogTitle,
@@ -13,7 +13,7 @@ import { Layout } from "../components/Layout";
 import { DeviceCard } from "../components/DeviceCard";
 import { CameraViewerDialog } from "../components/CameraViewerDialog";
 import { RecordingsDialog } from "../components/RecordingsDialog";
-import { createRoomSchema, createDeviceSchema, Device } from "../types";
+import { createHomeSchema, createRoomSchema, createDeviceSchema, Device, Room } from "../types";
 
 // --- Sub-components for Tabs ---
 
@@ -75,10 +75,13 @@ const ActivityTab = () => {
 
 export const Dashboard = () => {
     const queryClient = useQueryClient();
+    const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
     const [tabIndex, setTabIndex] = useState(0);
+    const [addRoomForHomeId, setAddRoomForHomeId] = useState<string | null>(null);
 
     // Dialog States
+    const [isAddHomeOpen, setAddHomeOpen] = useState(false);
     const [isAddRoomOpen, setAddRoomOpen] = useState(false);
     const [isAddDeviceOpen, setAddDeviceOpen] = useState(false);
     const [isCameraViewerOpen, setCameraViewerOpen] = useState(false);
@@ -87,20 +90,43 @@ export const Dashboard = () => {
 
     // Queries
     const { data: houses = [] } = useQuery({ queryKey: ['houses'], queryFn: api.homes.list });
-    const activeHomeId = houses[0]?.id;
 
-    const { data: rooms = [] } = useQuery({
-        queryKey: ['rooms', activeHomeId],
-        queryFn: () => activeHomeId ? api.rooms.list(activeHomeId) : Promise.resolve([]),
-        enabled: !!activeHomeId
+    // Auto-select first home when houses load
+    useEffect(() => {
+        if (!selectedHomeId && houses.length > 0) {
+            setSelectedHomeId(houses[0].id);
+        }
+    }, [houses, selectedHomeId]);
+
+    // Query rooms for ALL houses (to display in sidebar)
+    const roomsQueries = useQuery({
+        queryKey: ['allRooms', houses.map(h => h.id)],
+        queryFn: async () => {
+            const results: Record<string, Room[]> = {};
+            await Promise.all(
+                houses.map(async (house) => {
+                    const rooms = await api.rooms.list(house.id);
+                    results[house.id] = rooms;
+                })
+            );
+            return results;
+        },
+        enabled: houses.length > 0
     });
 
-    // Auto-select first room
+    const roomsByHome = roomsQueries.data || {};
+
+    // Get rooms for selected home
+    const currentRooms = selectedHomeId ? (roomsByHome[selectedHomeId] || []) : [];
+
+    // Auto-select first room when home changes
     useEffect(() => {
-        if (!selectedRoomId && rooms.length > 0) {
-            setSelectedRoomId(rooms[0].id);
+        if (selectedHomeId && currentRooms.length > 0 && !currentRooms.find(r => r.id === selectedRoomId)) {
+            setSelectedRoomId(currentRooms[0].id);
+        } else if (currentRooms.length === 0) {
+            setSelectedRoomId(null);
         }
-    }, [rooms, selectedRoomId]);
+    }, [selectedHomeId, currentRooms, selectedRoomId]);
 
     const { data: devices = [], isLoading: devicesLoading } = useQuery({
         queryKey: ['devices', selectedRoomId],
@@ -109,6 +135,16 @@ export const Dashboard = () => {
     });
 
     // Mutations
+    const addHomeMutation = useMutation({
+        mutationFn: (data: { name: string; location?: string }) => api.homes.create(data),
+        onSuccess: (newHome) => {
+            queryClient.invalidateQueries({ queryKey: ['houses'] });
+            setSelectedHomeId(newHome.id);
+            setAddHomeOpen(false);
+            resetHome();
+        }
+    });
+
     const toggleMutation = useMutation({
         mutationFn: (vars: { id: string, state: boolean }) =>
             api.devices.control(vars.id, { action: vars.state ? "ON" : "OFF" }),
@@ -133,10 +169,12 @@ export const Dashboard = () => {
     });
 
     const addRoomMutation = useMutation({
-        mutationFn: (name: string) => api.rooms.create({ homeId: activeHomeId, name }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['rooms'] });
+        mutationFn: (data: { homeId: string; name: string }) => api.rooms.create(data),
+        onSuccess: (newRoom) => {
+            queryClient.invalidateQueries({ queryKey: ['allRooms'] });
+            setSelectedRoomId(newRoom.id);
             setAddRoomOpen(false);
+            resetRoom();
         }
     });
 
@@ -149,8 +187,25 @@ export const Dashboard = () => {
     });
 
     // Forms
+    const { register: regHome, handleSubmit: subHome, reset: resetHome } = useForm({ resolver: zodResolver(createHomeSchema) });
     const { register: regRoom, handleSubmit: subRoom, reset: resetRoom } = useForm({ resolver: zodResolver(createRoomSchema) });
     const { register: regDev, handleSubmit: subDev, reset: resetDev } = useForm({ resolver: zodResolver(createDeviceSchema) });
+
+    // Handlers
+    const handleSelectHome = (homeId: string) => {
+        setSelectedHomeId(homeId);
+    };
+
+    const handleSelectRoom = (homeId: string, roomId: string) => {
+        setSelectedHomeId(homeId);
+        setSelectedRoomId(roomId);
+    };
+
+    const handleAddRoom = (homeId: string) => {
+        setAddRoomForHomeId(homeId);
+        resetRoom();
+        setAddRoomOpen(true);
+    };
 
     const handleToggle = (id: string, state: boolean) => toggleMutation.mutate({ id, state });
     const handleSpeed = (id: string, speed: number) => speedMutation.mutate({ id, speed });
@@ -166,22 +221,95 @@ export const Dashboard = () => {
         setRecordingsTarget(device);
     };
 
-    const selectedRoomName = rooms.find(r => r.id === selectedRoomId)?.name || "Select a Room";
+    const selectedRoom = currentRooms.find(r => r.id === selectedRoomId);
+    const selectedRoomName = selectedRoom?.name || "Select a Room";
+    const selectedHome = houses.find(h => h.id === selectedHomeId);
     const roomCameras = devices.filter(d => d.type === "CAMERA");
+
+    // Empty state when no home
+    if (houses.length === 0) {
+        return (
+            <Layout
+                houses={houses}
+                roomsByHome={roomsByHome}
+                selectedHomeId={selectedHomeId}
+                selectedRoomId={selectedRoomId}
+                onSelectHome={handleSelectHome}
+                onSelectRoom={handleSelectRoom}
+                onAddHome={() => { resetHome(); setAddHomeOpen(true); }}
+                onAddRoom={handleAddRoom}
+            >
+                <Box className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                    <Typography variant="h5" className="text-slate-600 mb-2">
+                        Welcome to Smart Home! 🏠
+                    </Typography>
+                    <Typography variant="body1" className="text-slate-400 mb-6">
+                        Create your first home to get started
+                    </Typography>
+                    <Button 
+                        variant="contained" 
+                        size="large"
+                        startIcon={<Add />}
+                        onClick={() => { resetHome(); setAddHomeOpen(true); }}
+                    >
+                        Create Your First Home
+                    </Button>
+                </Box>
+
+                {/* Add Home Dialog */}
+                <Dialog open={isAddHomeOpen} onClose={() => setAddHomeOpen(false)}>
+                    <form onSubmit={subHome((d: any) => addHomeMutation.mutate(d))}>
+                        <DialogTitle>Create New Home</DialogTitle>
+                        <DialogContent className="flex flex-col gap-4 min-w-[350px] pt-4">
+                            <TextField 
+                                autoFocus 
+                                label="Home Name" 
+                                fullWidth 
+                                variant="outlined" 
+                                placeholder="e.g., My Home, Beach House..."
+                                {...regHome("name")} 
+                            />
+                            <TextField 
+                                label="Location (Optional)" 
+                                fullWidth 
+                                variant="outlined" 
+                                placeholder="e.g., Ha Noi, District 1..."
+                                {...regHome("location")} 
+                            />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setAddHomeOpen(false)}>Cancel</Button>
+                            <Button type="submit" variant="contained" disabled={addHomeMutation.isPending}>
+                                {addHomeMutation.isPending ? "Creating..." : "Create"}
+                            </Button>
+                        </DialogActions>
+                    </form>
+                </Dialog>
+            </Layout>
+        );
+    }
 
     return (
         <Layout
             houses={houses}
-            rooms={rooms}
+            roomsByHome={roomsByHome}
+            selectedHomeId={selectedHomeId}
             selectedRoomId={selectedRoomId}
-            onSelectRoom={setSelectedRoomId}
-            onAddRoom={() => { resetRoom(); setAddRoomOpen(true); }}
+            onSelectHome={handleSelectHome}
+            onSelectRoom={handleSelectRoom}
+            onAddHome={() => { resetHome(); setAddHomeOpen(true); }}
+            onAddRoom={handleAddRoom}
         >
             <div className="mb-6 flex justify-between items-center">
                 <div>
-                    <Typography variant="h4" className="font-bold text-slate-800">{selectedRoomName}</Typography>
+                    <Typography variant="h4" className="font-bold text-slate-800">
+                        {selectedRoomId ? selectedRoomName : (selectedHome?.name || "Select a Home")}
+                    </Typography>
                     <Typography variant="body2" className="text-slate-500">
-                        {devices.length} Connected Devices
+                        {selectedRoomId 
+                            ? `${devices.length} Connected Devices` 
+                            : (selectedHome ? `${currentRooms.length} Rooms` : "No home selected")
+                        }
                     </Typography>
                 </div>
                 {selectedRoomId && (
@@ -195,27 +323,37 @@ export const Dashboard = () => {
                 )}
             </div>
 
-            <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
-                <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)}>
-                    <Tab label="Devices" />
-                    <Tab label="Activity" />
-                </Tabs>
-            </Box>
-
-            {tabIndex === 0 && (
-                <DevicesTab
-                    devices={devices}
-                    isLoading={devicesLoading}
-                    onToggle={handleToggle}
-                    onSpeed={handleSpeed}
-                    onDelete={handleDelete}
-                    onViewCamera={handleViewCamera}
-                    onToggleDetection={handleDetection}
-                    onShowRecordings={handleShowRecordings}
-                />
+            {!selectedRoomId && selectedHomeId && (
+                <Alert severity="info" className="mb-4">
+                    Select a room from the sidebar or create a new one to manage devices.
+                </Alert>
             )}
 
-            {tabIndex === 1 && <ActivityTab />}
+            {selectedRoomId && (
+                <>
+                    <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+                        <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)}>
+                            <Tab label="Devices" />
+                            <Tab label="Activity" />
+                        </Tabs>
+                    </Box>
+
+                    {tabIndex === 0 && (
+                        <DevicesTab
+                            devices={devices}
+                            isLoading={devicesLoading}
+                            onToggle={handleToggle}
+                            onSpeed={handleSpeed}
+                            onDelete={handleDelete}
+                            onViewCamera={handleViewCamera}
+                            onToggleDetection={handleDetection}
+                            onShowRecordings={handleShowRecordings}
+                        />
+                    )}
+
+                    {tabIndex === 1 && <ActivityTab />}
+                </>
+            )}
 
             {/* --- Modals & Overlays --- */}
 
@@ -235,19 +373,53 @@ export const Dashboard = () => {
               deviceName={recordingsTarget?.name || ""}
             />
 
+            {/* Add Home Dialog */}
+            <Dialog open={isAddHomeOpen} onClose={() => setAddHomeOpen(false)}>
+                <form onSubmit={subHome((d: any) => addHomeMutation.mutate(d))}>
+                    <DialogTitle>Create New Home</DialogTitle>
+                    <DialogContent className="flex flex-col gap-4 min-w-[350px] pt-4">
+                        <TextField 
+                            autoFocus 
+                            label="Home Name" 
+                            fullWidth 
+                            variant="outlined" 
+                            placeholder="e.g., My Home, Beach House..."
+                            {...regHome("name")} 
+                        />
+                        <TextField 
+                            label="Location (Optional)" 
+                            fullWidth 
+                            variant="outlined" 
+                            placeholder="e.g., Ha Noi, District 1..."
+                            {...regHome("location")} 
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setAddHomeOpen(false)}>Cancel</Button>
+                        <Button type="submit" variant="contained" disabled={addHomeMutation.isPending}>
+                            {addHomeMutation.isPending ? "Creating..." : "Create"}
+                        </Button>
+                    </DialogActions>
+                </form>
+            </Dialog>
+
+            {/* Add Room Dialog */}
             <Dialog open={isAddRoomOpen} onClose={() => setAddRoomOpen(false)}>
-                <form onSubmit={subRoom((d: any) => addRoomMutation.mutate(d.name))}>
+                <form onSubmit={subRoom((d: any) => addRoomMutation.mutate({ homeId: addRoomForHomeId!, name: d.name }))}>
                     <DialogTitle>Add New Room</DialogTitle>
                     <DialogContent>
                         <TextField autoFocus margin="dense" label="Room Name" fullWidth variant="outlined" {...regRoom("name")} />
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setAddRoomOpen(false)}>Cancel</Button>
-                        <Button type="submit" variant="contained">Create</Button>
+                        <Button type="submit" variant="contained" disabled={addRoomMutation.isPending}>
+                            {addRoomMutation.isPending ? "Creating..." : "Create"}
+                        </Button>
                     </DialogActions>
                 </form>
             </Dialog>
 
+            {/* Add Device Dialog */}
             <Dialog open={isAddDeviceOpen} onClose={() => setAddDeviceOpen(false)}>
                 <form onSubmit={subDev((d) => addDeviceMutation.mutate(d))}>
                     <DialogTitle>Add Device</DialogTitle>

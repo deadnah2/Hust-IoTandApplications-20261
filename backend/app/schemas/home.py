@@ -12,6 +12,7 @@ class HomeUpdate(BaseModel):
 
 class HomeResponse(BaseModel):
     id: str
+    ownerUserId: str
     name: str
     location: Optional[str] = None
     createdAt: datetime

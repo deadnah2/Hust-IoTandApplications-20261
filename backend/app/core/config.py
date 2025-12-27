@@ -6,8 +6,14 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "SmartHome Backend"
     API_V1_STR: str = "/api/v1"
     
-    # CORS (Frontend URLs)
-    CORS_ORIGINS: List[AnyHttpUrl] = []
+    # CORS (Frontend URLs) - Default includes common dev ports
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",  # Vite default
+        "http://localhost:3000",  # React default
+        "http://localhost:8080",  # Vue default
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ]
 
     # MongoDB Configuration
     MONGO_ROOT_USERNAME: str

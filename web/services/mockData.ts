@@ -2,7 +2,7 @@ import { House, Room, Device, User, ActivityLog } from "../types";
 const genId = () => Math.random().toString(36).substr(2, 9);
 
 // --- SEED DATA ---
-const user: User = { id: "u1", login: "admin", email: "admin@smarthome.com" };
+const user: User = { id: "u1", username: "admin", email: "admin@smarthome.com" };
 const house: House = { id: "h1", name: "MyHome", location: "Ha Noi" };
 
 const room1: Room = { id: "r1", homeId: "h1", name: "Living Room" };

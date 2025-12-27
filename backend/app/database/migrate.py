@@ -20,7 +20,7 @@ from app.models.user import User
 from app.models.session import Session
 from app.models.home import Home
 from app.models.room import Room
-from app.models.device import Device, DeviceType, DeviceStatus
+from app.models.device import Device, DeviceType, DeviceState
 from app.models.activity_log import ActivityLog, LogType
 from app.core.security import get_password_hash
 
@@ -101,16 +101,20 @@ async def seed_data():
     living_light = Device(
         roomId=living_room.id,
         name="Living Room Light",
+        bssid="AA:BB:CC:DD:EE:01",
+        controllerMAC="11:22:33:44:55:01",
         type=DeviceType.LIGHT,
-        status=DeviceStatus.OFF
+        state=DeviceState.OFF
     )
     await living_light.save()
     
     living_fan = Device(
         roomId=living_room.id,
         name="Living Room Fan",
+        bssid="AA:BB:CC:DD:EE:02",
+        controllerMAC="11:22:33:44:55:02",
         type=DeviceType.FAN,
-        status=DeviceStatus.OFF,
+        state=DeviceState.OFF,
         speed=0
     )
     await living_fan.save()
@@ -118,8 +122,10 @@ async def seed_data():
     living_camera = Device(
         roomId=living_room.id,
         name="Living Room Camera",
+        bssid="AA:BB:CC:DD:EE:03",
+        controllerMAC="11:22:33:44:55:03",
         type=DeviceType.CAMERA,
-        status=DeviceStatus.ON,
+        state=DeviceState.ON,
         streamUrl="rtsp://192.168.1.100:554/stream1",
         humanDetectionEnabled=True
     )
@@ -129,16 +135,20 @@ async def seed_data():
     bedroom_light = Device(
         roomId=bedroom.id,
         name="Bedroom Light",
+        bssid="AA:BB:CC:DD:EE:04",
+        controllerMAC="11:22:33:44:55:04",
         type=DeviceType.LIGHT,
-        status=DeviceStatus.ON
+        state=DeviceState.ON
     )
     await bedroom_light.save()
     
     bedroom_sensor = Device(
         roomId=bedroom.id,
         name="Bedroom Sensor",
+        bssid="AA:BB:CC:DD:EE:05",
+        controllerMAC="11:22:33:44:55:05",
         type=DeviceType.SENSOR,
-        status=DeviceStatus.ON
+        state=DeviceState.ON
     )
     await bedroom_sensor.save()
     
@@ -146,8 +156,10 @@ async def seed_data():
     kitchen_light = Device(
         roomId=kitchen.id,
         name="Kitchen Light",
+        bssid="AA:BB:CC:DD:EE:06",
+        controllerMAC="11:22:33:44:55:06",
         type=DeviceType.LIGHT,
-        status=DeviceStatus.OFF
+        state=DeviceState.OFF
     )
     await kitchen_light.save()
     
@@ -155,8 +167,10 @@ async def seed_data():
     home2_light = Device(
         roomId=living_room2.id,
         name="Home2 Living Light",
+        bssid="AA:BB:CC:DD:EE:07",
+        controllerMAC="11:22:33:44:55:07",
         type=DeviceType.LIGHT,
-        status=DeviceStatus.OFF
+        state=DeviceState.OFF
     )
     await home2_light.save()
     

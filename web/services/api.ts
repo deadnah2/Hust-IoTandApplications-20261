@@ -1,5 +1,5 @@
 import axios from "axios";
-import { USE_MOCK, API_BASE_URL } from "../constants";
+import { USE_MOCK, USE_MOCK_DEVICES, API_BASE_URL } from "../constants";
 import { MockDB } from "./mockData";
 import { House, Room, Device, User, ActivityLog, AuthResponse } from "../types";
 
@@ -24,9 +24,12 @@ const mockCall = async <T,>(data: T): Promise<T> => {
 
 // --- API METHODS ---
 
+console.log("🔧 API Config:", { USE_MOCK, USE_MOCK_DEVICES, API_BASE_URL });
+
 export const api = {
   auth: {
     login: async (creds: { username: string; password: string }): Promise<AuthResponse> => {
+      console.log("🔐 Login attempt, USE_MOCK:", USE_MOCK);
       if (USE_MOCK) {
         await MockDB.delay();
         if (creds.username === "admin" && creds.password === "admin") {
@@ -35,22 +38,27 @@ export const api = {
         }
         throw new Error("Invalid credentials (try admin/admin)");
       }
-      return (await client.post("/api/authenticate", creds)).data;
+      const data = (await client.post("/authenticate", creds)).data;
+      return {
+        id_token: data.access_token,
+        refresh_token: data.refresh_token,
+        user: data.user,
+      };
     },
-    register: async (data: any) => {
+    register: async (data: { username: string; email?: string; password: string }) => {
       if (USE_MOCK) return mockCall({});
-      return (await client.post("/api/register", data)).data;
+      return (await client.post("/register", data)).data;
     },
     getAccount: async (): Promise<User> => {
       if (USE_MOCK) return mockCall(MockDB.user);
-      return (await client.get("/api/account")).data;
+      return (await client.get("/me")).data;
     },
   },
 
   homes: {
     list: async (): Promise<House[]> => {
       if (USE_MOCK) return mockCall(MockDB.houses);
-      return (await client.get("/api/homes")).data;
+      return (await client.get("/homes")).data;
     },
     create: async (data: Partial<House>): Promise<House> => {
       if (USE_MOCK) {
@@ -59,14 +67,14 @@ export const api = {
         MockDB.addLog(`New house created: ${newHouse.name}`);
         return mockCall(newHouse);
       }
-      return (await client.post("/api/homes", data)).data;
+      return (await client.post("/homes", data)).data;
     }
   },
 
   rooms: {
     list: async (homeId: string): Promise<Room[]> => {
       if (USE_MOCK) return mockCall(MockDB.rooms.filter(r => r.homeId === homeId));
-      return (await client.get(`/api/rooms?homeId=${homeId}`)).data;
+      return (await client.get(`/rooms?homeId=${homeId}`)).data;
     },
     create: async (data: Partial<Room>): Promise<Room> => {
       if (USE_MOCK) {
@@ -75,7 +83,7 @@ export const api = {
         MockDB.addLog(`Room added: ${newRoom.name}`);
         return mockCall(newRoom);
       }
-      return (await client.post("/api/rooms", data)).data;
+      return (await client.post("/rooms", data)).data;
     },
     delete: async (id: string) => {
       if (USE_MOCK) {
@@ -83,17 +91,17 @@ export const api = {
         MockDB.addLog(`Room deleted: ${id}`, "WARNING");
         return mockCall(true);
       }
-      return (await client.delete(`/api/rooms/${id}`)).data;
+      return (await client.delete(`/rooms/${id}`)).data;
     }
   },
 
   devices: {
     list: async (roomId: string): Promise<Device[]> => {
-      if (USE_MOCK) return mockCall(MockDB.devices.filter(d => d.roomId === roomId));
-      return (await client.get(`/api/devices?roomId=${roomId}`)).data;
+      if (USE_MOCK || USE_MOCK_DEVICES) return mockCall(MockDB.devices.filter(d => d.roomId === roomId));
+      return (await client.get(`/devices?roomId=${roomId}`)).data;
     },
     create: async (data: Partial<Device>): Promise<Device> => {
-      if (USE_MOCK) {
+      if (USE_MOCK || USE_MOCK_DEVICES) {
         const newDevice = { 
           ...data, 
           id: Math.random().toString(), 
@@ -110,18 +118,18 @@ export const api = {
         MockDB.addLog(`Device installed: ${newDevice.name}`);
         return mockCall(newDevice);
       }
-      return (await client.post("/api/devices", data)).data;
+      return (await client.post("/devices", data)).data;
     },
     delete: async (id: string) => {
-       if (USE_MOCK) {
+       if (USE_MOCK || USE_MOCK_DEVICES) {
         MockDB.devices = MockDB.devices.filter(d => d.id !== id);
         MockDB.addLog(`Device removed: ${id}`, "WARNING");
         return mockCall(true);
        }
-       return (await client.delete(`/api/devices/${id}`)).data;
+       return (await client.delete(`/devices/${id}`)).data;
     },
     control: async (id: string, command: { action: "ON" | "OFF" | "SET_SPEED", speed?: number }) => {
-      if (USE_MOCK) {
+      if (USE_MOCK || USE_MOCK_DEVICES) {
         const dev = MockDB.devices.find(d => d.id === id);
         if (dev) {
           if (command.action === "ON") dev.status = "ON";
@@ -135,10 +143,10 @@ export const api = {
         }
         return mockCall(dev);
       }
-      return (await client.post(`/api/devices/${id}/command`, command)).data;
+      return (await client.post(`/devices/${id}/command`, command)).data;
     },
     toggleHumanDetection: async (id: string, enabled: boolean) => {
-      if (USE_MOCK) {
+      if (USE_MOCK || USE_MOCK_DEVICES) {
          const dev = MockDB.devices.find(d => d.id === id);
          if (dev && dev.type === "CAMERA") {
             dev.humanDetectionEnabled = enabled;
@@ -146,13 +154,13 @@ export const api = {
          }
          return mockCall(dev);
       }
-      return (await client.post(`/api/cameras/${id}/human-detection`, { enabled })).data;
+      throw new Error("Human detection API is not implemented on backend yet");
     }
   },
 
   logs: {
      list: async (): Promise<ActivityLog[]> => {
-        if(USE_MOCK) return mockCall(MockDB.logs);
+        if(USE_MOCK || USE_MOCK_DEVICES) return mockCall(MockDB.logs);
         return []; // Logs usually websocket or specific endpoint
      }
   }

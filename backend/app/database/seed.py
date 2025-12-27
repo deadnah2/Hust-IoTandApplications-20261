@@ -18,7 +18,7 @@ from app.models.user import User
 from app.models.session import Session
 from app.models.home import Home
 from app.models.room import Room
-from app.models.device import Device, DeviceType, DeviceStatus
+from app.models.device import Device, DeviceType, DeviceState
 from app.models.activity_log import ActivityLog, LogType
 from app.core.security import get_password_hash
 from app.core.config import settings
@@ -98,6 +98,9 @@ async def create_sample_homes(admin_user, test_users):
         location="123 Luxury Lane, Beverly Hills, CA"
     )
     await admin_home.save()
+    # Update admin user's home_ids
+    admin_user.home_ids = [admin_home.id]
+    await admin_user.save()
     homes.append(admin_home)
     print(f"✓ Created home: {admin_home.name}")
     
@@ -121,6 +124,9 @@ async def create_sample_homes(admin_user, test_users):
             location=locations[i]
         )
         await home.save()
+        # Update user's home_ids
+        user.home_ids = [home.id]
+        await user.save()
         homes.append(home)
         print(f"✓ Created home: {home.name}")
     
@@ -160,6 +166,15 @@ async def create_sample_devices(rooms):
     print("Creating sample devices...")
     
     devices = []
+    device_counter = 0
+    
+    def generate_bssid(counter):
+        """Generate a fake BSSID for seed data"""
+        return f"AA:BB:CC:DD:EE:{counter:02X}"
+    
+    def generate_mac(counter):
+        """Generate a fake MAC address for seed data"""
+        return f"11:22:33:44:55:{counter:02X}"
     
     # Get rooms by name for easier assignment
     living_rooms = [r for r in rooms if "Living Room" in r.name]
@@ -168,23 +183,29 @@ async def create_sample_devices(rooms):
     
     # Create devices for living rooms
     for living_room in living_rooms:
+        device_counter += 1
         # Smart light
         light = Device(
             roomId=living_room.id,
             name="Smart LED Light",
+            bssid=generate_bssid(device_counter),
+            controllerMAC=generate_mac(device_counter),
             type=DeviceType.LIGHT,
-            status=DeviceStatus.OFF
+            state=DeviceState.OFF
         )
         await light.save()
         devices.append(light)
         print(f"✓ Created device: {light.name} in {living_room.name}")
         
+        device_counter += 1
         # Smart fan
         fan = Device(
             roomId=living_room.id,
             name="Smart Ceiling Fan",
+            bssid=generate_bssid(device_counter),
+            controllerMAC=generate_mac(device_counter),
             type=DeviceType.FAN,
-            status=DeviceStatus.OFF,
+            state=DeviceState.OFF,
             speed=0
         )
         await fan.save()
@@ -193,11 +214,14 @@ async def create_sample_devices(rooms):
         
         # Security camera (only for first living room)
         if living_room == living_rooms[0]:
+            device_counter += 1
             camera = Device(
                 roomId=living_room.id,
                 name="Security Camera",
+                bssid=generate_bssid(device_counter),
+                controllerMAC=generate_mac(device_counter),
                 type=DeviceType.CAMERA,
-                status=DeviceStatus.ON,
+                state=DeviceState.ON,
                 streamUrl="rtsp://192.168.1.100:554/stream1",
                 humanDetectionEnabled=True
             )
@@ -207,12 +231,15 @@ async def create_sample_devices(rooms):
     
     # Create devices for bedrooms
     for bedroom in bedrooms:
+        device_counter += 1
         # Bedside light
         light = Device(
             roomId=bedroom.id,
             name="Bedside Lamp",
+            bssid=generate_bssid(device_counter),
+            controllerMAC=generate_mac(device_counter),
             type=DeviceType.LIGHT,
-            status=DeviceStatus.ON
+            state=DeviceState.ON
         )
         await light.save()
         devices.append(light)
@@ -220,11 +247,14 @@ async def create_sample_devices(rooms):
         
         # Motion sensor (only for master bedroom)
         if "Master" in bedroom.name:
+            device_counter += 1
             sensor = Device(
                 roomId=bedroom.id,
                 name="Motion Sensor",
+                bssid=generate_bssid(device_counter),
+                controllerMAC=generate_mac(device_counter),
                 type=DeviceType.SENSOR,
-                status=DeviceStatus.ON
+                state=DeviceState.ON
             )
             await sensor.save()
             devices.append(sensor)
@@ -232,12 +262,15 @@ async def create_sample_devices(rooms):
     
     # Create devices for kitchens
     for kitchen in kitchens:
+        device_counter += 1
         # Kitchen light
         light = Device(
             roomId=kitchen.id,
             name="Kitchen Ceiling Light",
+            bssid=generate_bssid(device_counter),
+            controllerMAC=generate_mac(device_counter),
             type=DeviceType.LIGHT,
-            status=DeviceStatus.OFF
+            state=DeviceState.OFF
         )
         await light.save()
         devices.append(light)
@@ -245,11 +278,14 @@ async def create_sample_devices(rooms):
         
         # Range hood fan (only for first kitchen)
         if kitchen == kitchens[0]:
+            device_counter += 1
             hood_fan = Device(
                 roomId=kitchen.id,
                 name="Range Hood Fan",
+                bssid=generate_bssid(device_counter),
+                controllerMAC=generate_mac(device_counter),
                 type=DeviceType.FAN,
-                status=DeviceStatus.OFF,
+                state=DeviceState.OFF,
                 speed=0
             )
             await hood_fan.save()

@@ -14,14 +14,18 @@ import {
   ListItemIcon,
   Box,
   Divider,
-  Button
+  Button,
+  Collapse
 } from "@mui/material";
 import {
   Menu as MenuIcon,
   Home as HomeIcon,
   MeetingRoom as RoomIcon,
   Add as AddIcon,
-  AccountCircle
+  AccountCircle,
+  ExpandLess,
+  ExpandMore,
+  AddHome as AddHomeIcon
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { House, Room } from "../types";
@@ -29,24 +33,31 @@ import { USE_MOCK, ROUTES } from "../constants";
 
 interface LayoutProps {
   houses: House[];
-  rooms: Room[];
+  roomsByHome: Record<string, Room[]>; // { homeId: Room[] }
+  selectedHomeId: string | null;
   selectedRoomId: string | null;
-  onSelectRoom: (id: string) => void;
-  onAddRoom: () => void;
+  onSelectHome: (id: string) => void;
+  onSelectRoom: (homeId: string, roomId: string) => void;
+  onAddHome: () => void;
+  onAddRoom: (homeId: string) => void;
   children: React.ReactNode;
 }
 
 export const Layout: React.FC<LayoutProps> = ({
   houses,
-  rooms,
+  roomsByHome,
+  selectedHomeId,
   selectedRoomId,
+  onSelectHome,
   onSelectRoom,
+  onAddHome,
   onAddRoom,
   children
 }) => {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedHomeId, setExpandedHomeId] = useState<string | null>(selectedHomeId);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -61,7 +72,20 @@ export const Layout: React.FC<LayoutProps> = ({
     navigate(ROUTES.LOGIN);
   };
 
-  const drawerWidth = 260;
+  const handleHomeClick = (homeId: string) => {
+    if (expandedHomeId === homeId) {
+      setExpandedHomeId(null);
+    } else {
+      setExpandedHomeId(homeId);
+      onSelectHome(homeId);
+    }
+  };
+
+  const handleRoomClick = (homeId: string, roomId: string) => {
+    onSelectRoom(homeId, roomId);
+  };
+
+  const drawerWidth = 280;
 
   const drawerContent = (
     <div className="flex flex-col h-full bg-slate-50">
@@ -71,47 +95,129 @@ export const Layout: React.FC<LayoutProps> = ({
         </Typography>
       </Toolbar>
       <Divider />
-      <Box className="p-4">
-        {houses.length > 0 ? (
-          <Button variant="outlined" fullWidth startIcon={<HomeIcon />}>
-            {houses[0].name}
-          </Button>
-        ) : (
-          <Typography variant="body2" className="text-gray-500">No houses found</Typography>
-        )}
+      
+      {/* Create Home Button */}
+      <Box className="p-3">
+        <Button 
+          variant="outlined" 
+          fullWidth 
+          startIcon={<AddHomeIcon />}
+          onClick={onAddHome}
+          color="primary"
+          sx={{ borderStyle: 'dashed' }}
+        >
+          Create New Home
+        </Button>
       </Box>
+      
       <Divider />
-      <List className="flex-grow">
-        <Typography variant="overline" className="px-4 text-gray-500 font-bold">
-          Rooms
-        </Typography>
-        {rooms.map((room) => (
-          <ListItemButton
-            key={room.id}
-            selected={selectedRoomId === room.id}
-            onClick={() => onSelectRoom(room.id)}
-            sx={{
-              "&.Mui-selected": {
-                backgroundColor: "#e0f2fe", // blue-100
-                borderRight: "4px solid #0288d1"
-              }
-            }}
-          >
-            <ListItemIcon>
-              <RoomIcon color={selectedRoomId === room.id ? "primary" : "inherit"} />
-            </ListItemIcon>
-            <ListItemText primary={room.name} />
-          </ListItemButton>
-        ))}
-        <ListItemButton onClick={onAddRoom} className="text-blue-600">
-          <ListItemIcon>
-            <AddIcon color="primary" />
-          </ListItemIcon>
-          <ListItemText primary="Add Room" primaryTypographyProps={{ color: "primary", fontWeight: "medium" }} />
-        </ListItemButton>
+      
+      {/* Homes List with nested Rooms */}
+      <List className="flex-grow overflow-y-auto">
+        {houses.length === 0 ? (
+          <Box className="p-4 text-center">
+            <Typography variant="body2" className="text-gray-500">
+              No homes yet. Create your first home!
+            </Typography>
+          </Box>
+        ) : (
+          houses.map((house) => {
+            const isExpanded = expandedHomeId === house.id;
+            const rooms = roomsByHome[house.id] || [];
+            
+            return (
+              <React.Fragment key={house.id}>
+                {/* Home Item */}
+                <ListItemButton 
+                  onClick={() => handleHomeClick(house.id)}
+                  selected={selectedHomeId === house.id && !selectedRoomId}
+                  sx={{
+                    bgcolor: isExpanded ? 'rgba(37, 99, 235, 0.04)' : 'transparent',
+                    "&.Mui-selected": {
+                      backgroundColor: "#dbeafe",
+                    }
+                  }}
+                >
+                  <ListItemIcon>
+                    <HomeIcon color={isExpanded ? "primary" : "inherit"} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={house.name} 
+                    secondary={house.location || "No location"}
+                    primaryTypographyProps={{ 
+                      fontWeight: isExpanded ? 'bold' : 'medium',
+                      color: isExpanded ? 'primary' : 'inherit'
+                    }}
+                    secondaryTypographyProps={{
+                      fontSize: '0.75rem'
+                    }}
+                  />
+                  {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+                
+                {/* Rooms Collapse */}
+                <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {rooms.length === 0 ? (
+                      <Box className="pl-8 py-2">
+                        <Typography variant="caption" className="text-gray-400 italic">
+                          No rooms yet
+                        </Typography>
+                      </Box>
+                    ) : (
+                      rooms.map((room) => (
+                        <ListItemButton
+                          key={room.id}
+                          sx={{ pl: 4 }}
+                          selected={selectedRoomId === room.id}
+                          onClick={() => handleRoomClick(house.id, room.id)}
+                        >
+                          <ListItemIcon>
+                            <RoomIcon 
+                              fontSize="small" 
+                              color={selectedRoomId === room.id ? "primary" : "inherit"} 
+                            />
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={room.name}
+                            primaryTypographyProps={{
+                              fontSize: '0.9rem'
+                            }}
+                          />
+                        </ListItemButton>
+                      ))
+                    )}
+                    
+                    {/* Add Room Button */}
+                    <ListItemButton 
+                      sx={{ pl: 4 }} 
+                      onClick={() => onAddRoom(house.id)}
+                      className="text-blue-600"
+                    >
+                      <ListItemIcon>
+                        <AddIcon fontSize="small" color="primary" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="Add Room" 
+                        primaryTypographyProps={{ 
+                          color: "primary", 
+                          fontWeight: "medium",
+                          fontSize: '0.9rem'
+                        }} 
+                      />
+                    </ListItemButton>
+                  </List>
+                </Collapse>
+                
+                <Divider variant="middle" />
+              </React.Fragment>
+            );
+          })
+        )}
       </List>
-      <Box className="p-4 text-xs text-gray-400 text-center">
-         v0.1.0 Alpha
+      
+      <Box className="p-4 text-xs text-gray-400 text-center border-t">
+        v0.1.0 Alpha
       </Box>
     </div>
   );

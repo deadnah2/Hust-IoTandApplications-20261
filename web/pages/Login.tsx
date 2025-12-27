@@ -19,7 +19,7 @@ export const Login = () => {
       localStorage.setItem("id_token", data.id_token);
       navigate(ROUTES.APP);
     },
-    onError: (err: any) => setError(err.message || "Login failed"),
+    onError: (err: any) => setError(err.response?.data?.detail || err.message || "Login failed"),
   });
 
   const registerMutation = useMutation({
@@ -92,9 +92,9 @@ export const Login = () => {
             <TextField
               fullWidth
               label="Username"
-              {...registerReg("login")}
-              error={!!regErrors.login}
-              helperText={regErrors.login?.message as string}
+              {...registerReg("username")}
+              error={!!regErrors.username}
+              helperText={regErrors.username?.message as string}
             />
             <TextField
               fullWidth

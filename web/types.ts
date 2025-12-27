@@ -1,6 +1,6 @@
 export interface User {
   id: string;
-  login: string;
+  username: string;
   email?: string;
 }
 
@@ -8,12 +8,17 @@ export interface House {
   id: string;
   name: string;
   location?: string;
+  ownerUserId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Room {
   id: string;
   homeId: string;
   name: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type DeviceType = "LIGHT" | "FAN" | "CAMERA" | "SENSOR";
@@ -41,6 +46,7 @@ export interface ActivityLog {
 
 export interface AuthResponse {
   id_token: string;
+  refresh_token?: string;
   user: User;
 }
 
@@ -53,9 +59,14 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  login: z.string().min(3),
+  username: z.string().min(3),
   email: z.string().email(),
   password: z.string().min(4),
+});
+
+export const createHomeSchema = z.object({
+  name: z.string().min(1, "Home name is required"),
+  location: z.string().optional(),
 });
 
 export const createRoomSchema = z.object({
