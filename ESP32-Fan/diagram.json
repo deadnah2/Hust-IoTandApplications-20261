@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "author": "Smart Home IoT Team",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 50,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_fan",
+      "top": 20,
+      "left": 280,
+      "attrs": { "color": "blue", "label": "FAN" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 70,
+      "left": 230,
+      "rotate": 0,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_speed1",
+      "top": 130,
+      "left": 240,
+      "attrs": { "color": "green", "label": "S1" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_speed2",
+      "top": 130,
+      "left": 280,
+      "attrs": { "color": "yellow", "label": "S2" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_speed3",
+      "top": 130,
+      "left": 320,
+      "attrs": { "color": "red", "label": "S3" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": 180,
+      "left": 220,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": 180,
+      "left": 260,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r4",
+      "top": 180,
+      "left": 300,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_up",
+      "top": 250,
+      "left": 200,
+      "attrs": { "color": "green", "label": "UP" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_down",
+      "top": 250,
+      "left": 300,
+      "attrs": { "color": "red", "label": "DOWN" }
+    }
+  ],
+  "connections": [
+    ["esp:TX", "$serialMonitor:RX", "", []],
+    ["esp:RX", "$serialMonitor:TX", "", []],
+    ["r1:2", "led_fan:A", "blue", ["h20"]],
+    ["r1:1", "esp:18", "blue", ["h0", "v-20", "h-130"]],
+    ["led_fan:C", "esp:GND.1", "black", ["v10", "h-180"]],
+    ["r2:2", "led_speed1:A", "green", ["v-10"]],
+    ["r2:1", "esp:25", "green", ["h-120"]],
+    ["led_speed1:C", "esp:GND.2", "black", ["v30", "h-160"]],
+    ["r3:2", "led_speed2:A", "yellow", ["v-10"]],
+    ["r3:1", "esp:26", "yellow", ["h-140"]],
+    ["led_speed2:C", "esp:GND.2", "black", ["v35", "h-190"]],
+    ["r4:2", "led_speed3:A", "red", ["v-10"]],
+    ["r4:1", "esp:27", "red", ["h-160"]],
+    ["led_speed3:C", "esp:GND.2", "black", ["v40", "h-220"]],
+    ["btn_up:1.l", "esp:GND.3", "black", ["v30", "h-150"]],
+    ["btn_up:2.l", "esp:19", "purple", ["v20", "h-130"]],
+    ["btn_down:1.l", "esp:GND.3", "black", ["v35", "h-250"]],
+    ["btn_down:2.l", "esp:21", "orange", ["v25", "h-230"]]
+  ]
+}

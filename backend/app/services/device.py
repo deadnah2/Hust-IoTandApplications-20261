@@ -98,6 +98,27 @@ class DeviceService:
         if not device:
             return False
 
-        # TODO: Publish command to MQTT topic for the device
-        # For now, just return True
+        # Publish command to MQTT topic for the device
+        from app.core.mqtt import publish_command
+        
+        if device.controllerMAC:
+            mqtt_command = {
+                "action": command.action,
+            }
+            if command.speed is not None:
+                mqtt_command["speed"] = command.speed
+            
+            publish_command(device.controllerMAC, mqtt_command)
+            
+            # Update device state in database
+            update_data = {"updatedAt": datetime.utcnow()}
+            if command.action == "ON":
+                update_data["state"] = "ON"
+            elif command.action == "OFF":
+                update_data["state"] = "OFF"
+            if command.speed is not None:
+                update_data["speed"] = command.speed
+                
+            await device.update({"$set": update_data})
+            
         return True

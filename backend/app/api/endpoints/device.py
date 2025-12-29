@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from app.api import deps
 from app.models.user import User
+from app.models.device import Device
 from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceResponse, DeviceCommand, NewDeviceInLAN
 from app.services.device import DeviceService
 from app.services.camera import CameraStream
@@ -10,6 +11,26 @@ import asyncio
 import cv2
 
 router = APIRouter()
+
+# Helper function to convert Device model to DeviceResponse
+def device_to_response(device: Device) -> DeviceResponse:
+    return DeviceResponse(
+        id=str(device.id),
+        roomId=str(device.roomId) if device.roomId else None,
+        name=device.name,
+        custom_name=device.custom_name,
+        controllerMAC=device.controllerMAC,
+        bssid=device.bssid,
+        type=device.type,
+        state=device.state,
+        speed=device.speed,
+        streamUrl=device.streamUrl,
+        humanDetectionEnabled=device.humanDetectionEnabled,
+        temperature=device.temperature,
+        humidity=device.humidity,
+        createdAt=device.createdAt,
+        updatedAt=device.updatedAt
+    )
 
 # for testing
 @router.post("/", response_model=DeviceResponse)
@@ -23,45 +44,23 @@ async def create_device(
             status_code=403,
             detail="You don't have permission to add device to this room"
         )
-    return DeviceResponse(
-        id=str(device.id),
-        roomId=str(device.roomId) if device.roomId else None,
-        name=device.name,
-        custom_name=device.custom_name,
-        controllerMAC=device.controllerMAC,
-        bssid=device.bssid,
-        type=device.type,
-        state=device.state,
-        speed=device.speed,
-        streamUrl=device.streamUrl,
-        humanDetectionEnabled=device.humanDetectionEnabled,
-        createdAt=device.createdAt,
-        updatedAt=device.updatedAt
-    )
+    return device_to_response(device)
 
 @router.get("/lan", response_model=List[DeviceResponse])
 async def get_new_devices_in_lan(
     bssid: str,
 ):
     devices = await DeviceService.get_new_devices_in_lan(bssid)
-    return [
-        DeviceResponse(
-            id=str(device.id),
-            roomId=str(device.roomId) if device.roomId else None,
-            name=device.name,
-            custom_name=device.custom_name,
-            controllerMAC=device.controllerMAC,
-            bssid=device.bssid,
-            type=device.type,
-            state=device.state,
-            speed=device.speed,
-            streamUrl=device.streamUrl,
-            humanDetectionEnabled=device.humanDetectionEnabled,
-            createdAt=device.createdAt,
-            updatedAt=device.updatedAt
-        )
-        for device in devices
-    ]
+    return [device_to_response(device) for device in devices]
+
+# Get unassigned devices (not in any room)
+@router.get("/unassigned", response_model=List[DeviceResponse])
+async def get_unassigned_devices(
+    current_user: User = Depends(deps.get_current_user)
+):
+    """Get all devices not assigned to any room"""
+    devices = await Device.find(Device.roomId == None).to_list()
+    return [device_to_response(device) for device in devices]
 
 @router.get("/", response_model=List[DeviceResponse])
 async def read_devices(
@@ -69,24 +68,7 @@ async def read_devices(
     current_user: User = Depends(deps.get_current_user)
 ):
     devices = await DeviceService.get_devices_by_room(roomId, current_user)
-    return [
-        DeviceResponse(
-            id=str(device.id),
-            roomId=str(device.roomId) if device.roomId else None,
-            name=device.name,
-            custom_name=device.custom_name,
-            controllerMAC=device.controllerMAC,
-            bssid=device.bssid,
-            type=device.type,
-            state=device.state,
-            speed=device.speed,
-            streamUrl=device.streamUrl,
-            humanDetectionEnabled=device.humanDetectionEnabled,
-            createdAt=device.createdAt,
-            updatedAt=device.updatedAt
-        )
-        for device in devices
-    ]
+    return [device_to_response(device) for device in devices]
 
 @router.get("/{device_id}", response_model=DeviceResponse)
 async def read_device(
@@ -99,21 +81,7 @@ async def read_device(
             status_code=404,
             detail="Device not found or you don't have permission"
         )
-    return DeviceResponse(
-        id=str(device.id),
-        roomId=str(device.roomId) if device.roomId else None,
-        name=device.name,
-        custom_name=device.custom_name,
-        controllerMAC=device.controllerMAC,
-        bssid=device.bssid,
-        type=device.type,
-        state=device.state,
-        speed=device.speed,
-        streamUrl=device.streamUrl,
-        humanDetectionEnabled=device.humanDetectionEnabled,
-        createdAt=device.createdAt,
-        updatedAt=device.updatedAt
-    )
+    return device_to_response(device)
 
 @router.put("/{device_id}", response_model=DeviceResponse)
 async def update_device(
@@ -127,21 +95,7 @@ async def update_device(
             status_code=404,
             detail="Device not found or you don't have permission"
         )
-    return DeviceResponse(
-        id=str(device.id),
-        roomId=str(device.roomId) if device.roomId else None,
-        name=device.name,
-        custom_name=device.custom_name,
-        controllerMAC=device.controllerMAC,
-        bssid=device.bssid,
-        type=device.type,
-        state=device.state,
-        speed=device.speed,
-        streamUrl=device.streamUrl,
-        humanDetectionEnabled=device.humanDetectionEnabled,
-        createdAt=device.createdAt,
-        updatedAt=device.updatedAt
-    )
+    return device_to_response(device)
 
 @router.delete("/{device_id}")
 async def delete_device(

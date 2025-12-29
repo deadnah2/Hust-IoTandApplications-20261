@@ -41,6 +41,9 @@ class DeviceResponse(BaseModel):
     speed: Optional[int] = None
     streamUrl: Optional[str] = None
     humanDetectionEnabled: Optional[bool] = None
+    # Sensor data
+    temperature: Optional[float] = None
+    humidity: Optional[float] = None
     createdAt: datetime
     updatedAt: datetime
 

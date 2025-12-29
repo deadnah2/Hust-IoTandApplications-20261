@@ -8,10 +8,19 @@ from app.services.device import DeviceService
 # Khởi tạo MQTT client
 client = mqtt.Client()
 
+# Reference to the async event loop (set in connect_mqtt)
+_loop = None
+
 # Callback khi kết nối thành công
 def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT Broker!")
-    client.subscribe("device/new")
+    if rc == 0:
+        print("✅ Connected to MQTT Broker!")
+        # Subscribe to topics
+        client.subscribe("device/new")
+        client.subscribe("device/data/#")
+        print("📥 Subscribed to: device/new, device/data/#")
+    else:
+        print(f"❌ Failed to connect to MQTT, return code {rc}")
 
 # Callback khi nhận được message
 def on_message(client, userdata, msg):
@@ -25,8 +34,15 @@ client.on_message = on_message
 
 # Kết nối đến broker
 def connect_mqtt():
-    client.connect(settings.MQTT_BROKER, settings.MQTT_PORT, 60)
-    client.loop_start()  # Chạy loop trong background
+    global _loop
+    _loop = asyncio.get_event_loop()
+    
+    try:
+        client.connect(settings.MQTT_BROKER, settings.MQTT_PORT, 60)
+        client.loop_start()  # Chạy loop trong background
+        print(f"🔌 Connecting to MQTT: {settings.MQTT_BROKER}:{settings.MQTT_PORT}")
+    except Exception as e:
+        print(f"❌ MQTT connection error: {e}")
 
 # Ngắt kết nối
 def disconnect_mqtt():
