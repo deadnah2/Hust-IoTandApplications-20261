@@ -11,8 +11,8 @@ class DeviceType(str, Enum):
     SENSOR = "SENSOR"
 
 class DeviceState(str, Enum):
-    ON = "ON"
-    OFF = "OFF"
+    ON = "ONLINE"
+    OFF = "OFFLINE"
 
 class Device(Document):
     roomId: Optional[Indexed(PydanticObjectId)] = None

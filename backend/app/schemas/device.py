@@ -10,9 +10,10 @@ class DeviceCreate(BaseModel):
     roomId: Optional[str] = None
     name: str
     custom_name: Optional[str] = ""
-    controllerMAC: Optional[str] = None
+    controllerMAC: str
     bssid: str
     type: DeviceType
+    state: Optional[DeviceState] = DeviceState.OFF
     speed: Optional[int] = 0
     streamUrl: Optional[str] = None
     humanDetectionEnabled: Optional[bool] = False
@@ -36,7 +37,7 @@ class DeviceResponse(BaseModel):
     controllerMAC: Optional[str] = None
     bssid: Optional[str] = None
     type: DeviceType
-    status: DeviceState
+    state: DeviceState
     speed: Optional[int] = None
     streamUrl: Optional[str] = None
     humanDetectionEnabled: Optional[bool] = None

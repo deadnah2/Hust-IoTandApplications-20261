@@ -1,6 +1,9 @@
 import json
+import asyncio
 import paho.mqtt.client as mqtt
 from app.core.config import settings
+from app.schemas.device import DeviceCreate
+from app.services.device import DeviceService
 
 # Khởi tạo MQTT client
 client = mqtt.Client()
@@ -14,7 +17,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     print("Received message: ", msg.topic, msg.payload.decode())
     if msg.topic == "device/new":
-        add_device(msg.payload.decode())
+        asyncio.create_task(add_device(msg.payload.decode()))
 
 # Gán callbacks
 client.on_connect = on_connect
@@ -30,16 +33,34 @@ def disconnect_mqtt():
     client.loop_stop()
     client.disconnect()
 
-def add_device(payload):
+async def add_device(payload: str):
     """
-    Placeholder function to handle adding a new device.
+    Handles adding a new device.
     """
-    print(f"Placeholder for adding a new device with payload: {payload}")
-    # Here you would typically parse the payload (e.g., if it's JSON)
-    # and then interact with your database to add the new device.
-    # For example:
-    # try:
-    #     device_data = json.loads(payload)
-    #     # ... create and save a new Device document ...
-    # except json.JSONDecodeError:
-    #     print("Error decoding JSON payload")
+    try:
+        device_data = json.loads(payload)
+        device_in = DeviceCreate(**device_data)
+
+        # Check for existing device
+        existing_device = await DeviceService.get_device_by_name_and_controller_mac(
+            device_in.name, device_in.controllerMAC
+        )
+        if existing_device:
+            print(f"Device with name '{device_in.name}' and MAC '{device_in.controllerMAC}' already exists.")
+            return
+
+        # Create new device
+        new_device = await DeviceService.create_device(device_in)
+        if new_device and new_device.controllerMAC:
+            print(f"New device added: {new_device.name}")
+            # Subscribe to device's data topic
+            topic = f"device/data/{new_device.controllerMAC}"
+            client.subscribe(topic)
+            print(f"Subscribed to {topic}")
+        else:
+            print("Failed to add new device.")
+
+    except json.JSONDecodeError:
+        print("Error decoding JSON payload")
+    except Exception as e:
+        print(f"An error occurred: {e}")

@@ -12,7 +12,7 @@ public:
     void begin();
     void loop();
     bool isConnected();
-    void publishDeviceNew(String type, String bssid, String mac, String status);
+    void publishDeviceNew(String name, String type, String bssid, String mac, String status);
     void publishData(String mac, String dataJson);
 
 private:

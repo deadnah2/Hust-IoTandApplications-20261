@@ -1,9 +1,13 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from app.api import deps
 from app.models.user import User
 from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceResponse, DeviceCommand, NewDeviceInLAN
 from app.services.device import DeviceService
+from app.services.camera import CameraStream
+import asyncio
+import cv2
 
 router = APIRouter()
 
@@ -27,7 +31,7 @@ async def create_device(
         controllerMAC=device.controllerMAC,
         bssid=device.bssid,
         type=device.type,
-        status=device.state,
+        state=device.state,
         speed=device.speed,
         streamUrl=device.streamUrl,
         humanDetectionEnabled=device.humanDetectionEnabled,
@@ -49,7 +53,7 @@ async def get_new_devices_in_lan(
             controllerMAC=device.controllerMAC,
             bssid=device.bssid,
             type=device.type,
-            status=device.state,
+            state=device.state,
             speed=device.speed,
             streamUrl=device.streamUrl,
             humanDetectionEnabled=device.humanDetectionEnabled,
@@ -74,7 +78,7 @@ async def read_devices(
             controllerMAC=device.controllerMAC,
             bssid=device.bssid,
             type=device.type,
-            status=device.state,
+            state=device.state,
             speed=device.speed,
             streamUrl=device.streamUrl,
             humanDetectionEnabled=device.humanDetectionEnabled,
@@ -103,7 +107,7 @@ async def read_device(
         controllerMAC=device.controllerMAC,
         bssid=device.bssid,
         type=device.type,
-        status=device.state,
+        state=device.state,
         speed=device.speed,
         streamUrl=device.streamUrl,
         humanDetectionEnabled=device.humanDetectionEnabled,
@@ -131,7 +135,7 @@ async def update_device(
         controllerMAC=device.controllerMAC,
         bssid=device.bssid,
         type=device.type,
-        status=device.state,
+        state=device.state,
         speed=device.speed,
         streamUrl=device.streamUrl,
         humanDetectionEnabled=device.humanDetectionEnabled,
@@ -165,3 +169,34 @@ async def send_command(
             detail="Device not found or you don't have permission"
         )
     return {"message": "Command sent successfully"}
+
+@router.get("/camera-stream")
+async def camera_stream(
+    device_id: str,
+    current_user: User = Depends(deps.get_current_user)
+):
+    device = await DeviceService.get_device_by_id(device_id, current_user)
+    if not device or not device.streamUrl:
+        raise HTTPException(
+            status_code=404,
+            detail="Device not found or no stream URL"
+        )
+
+    # Khởi tạo CameraStream với detection bật
+    stream = CameraStream(device.streamUrl, humanDetectionMode=True)
+    stream.start()
+
+    async def generate():
+        try:
+            while True:
+                frame = stream.get_processed_frame()
+                if frame is not None:
+                    ret, buffer = cv2.imencode('.jpg', frame)
+                    if ret:
+                        yield (b'--frame\r\n'
+                               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                await asyncio.sleep(0.1)  # Tránh loop quá nhanh
+        finally:
+            stream.stop()
+
+    return StreamingResponse(generate(), media_type='multipart/x-mixed-replace; boundary=frame')

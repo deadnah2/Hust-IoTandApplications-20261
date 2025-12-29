@@ -8,6 +8,14 @@ from app.services.room import RoomService
 
 class DeviceService:
     @staticmethod
+    async def get_device_by_name_and_controller_mac(name: str, controller_mac: str) -> Optional[Device]:
+        device = await Device.find_one(
+            Device.name == name,
+            Device.controllerMAC == controller_mac
+        )
+        return device
+
+    @staticmethod
     async def create_device(device_in: DeviceCreate) -> Optional[Device]:
         # Verify room ownership if roomId is provided
         # if device_in.roomId:
