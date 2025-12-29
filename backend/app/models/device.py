@@ -25,6 +25,9 @@ class Device(Document):
     speed: Optional[int] = 0 # For FAN: 0..3
     streamUrl: Optional[str] = None # For CAMERA
     humanDetectionEnabled: Optional[bool] = False
+    # Sensor data
+    temperature: Optional[float] = None  # For SENSOR: °C
+    humidity: Optional[float] = None  # For SENSOR: %
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)
 

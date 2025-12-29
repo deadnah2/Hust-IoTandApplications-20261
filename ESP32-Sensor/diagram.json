@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "author": "Smart Home IoT Team",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 50,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht1",
+      "top": -50,
+      "left": 250,
+      "rotate": 0,
+      "attrs": { "temperature": "26", "humidity": "65" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_status",
+      "top": 150,
+      "left": 280,
+      "attrs": { "color": "green", "label": "Status" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 200,
+      "left": 230,
+      "rotate": 0,
+      "attrs": { "value": "220" }
+    }
+  ],
+  "connections": [
+    ["esp:TX", "$serialMonitor:RX", "", []],
+    ["esp:RX", "$serialMonitor:TX", "", []],
+    ["dht1:VCC", "esp:3V3", "red", ["h0", "v80", "h-150"]],
+    ["dht1:GND", "esp:GND.1", "black", ["h10", "v100", "h-170"]],
+    ["dht1:SDA", "esp:4", "green", ["h20", "v130", "h-140"]],
+    ["r1:2", "led_status:A", "green", ["h20"]],
+    ["r1:1", "esp:2", "green", ["h0", "v-50", "h-130"]],
+    ["led_status:C", "esp:GND.2", "black", ["v30", "h-200"]]
+  ]
+}

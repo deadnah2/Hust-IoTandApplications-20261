@@ -52,3 +52,7 @@ data/db/
 mqtt/data/
 mqtt/log/
 *.db
+
+# PlatformIO
+ESP32-Sensor/.pio/
+ESP32-Fan/.pio/
