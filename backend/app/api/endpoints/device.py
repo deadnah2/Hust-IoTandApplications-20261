@@ -14,6 +14,14 @@ router = APIRouter()
 
 # Helper function to convert Device model to DeviceResponse
 def device_to_response(device: Device) -> DeviceResponse:
+    state = str(device.state).strip().upper()
+    if state in ("ONLINE", "ON"):
+        state = "ON"
+    elif state in ("OFFLINE", "OFF"):
+        state = "OFF"
+    else:
+        state = "OFF"
+
     return DeviceResponse(
         id=str(device.id),
         roomId=str(device.roomId) if device.roomId else None,
@@ -22,7 +30,7 @@ def device_to_response(device: Device) -> DeviceResponse:
         controllerMAC=device.controllerMAC,
         bssid=device.bssid,
         type=device.type,
-        state=device.state,
+        state=state,
         speed=device.speed,
         streamUrl=device.streamUrl,
         humanDetectionEnabled=device.humanDetectionEnabled,

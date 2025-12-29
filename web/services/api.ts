@@ -98,14 +98,31 @@ export const api = {
   devices: {
     list: async (roomId: string): Promise<Device[]> => {
       if (USE_MOCK || USE_MOCK_DEVICES) return mockCall(MockDB.devices.filter(d => d.roomId === roomId));
-      return (await client.get(`/devices?roomId=${roomId}`)).data;
+      return (await client.get(`/devices/?roomId=${roomId}`)).data;
+    },
+    discover: async (bssid: string): Promise<Device[]> => {
+      if (USE_MOCK || USE_MOCK_DEVICES) {
+        return mockCall(MockDB.devices.filter(d => d.roomId == null && d.bssid === bssid));
+      }
+      return (await client.get(`/devices/lan?bssid=${encodeURIComponent(bssid)}`)).data;
+    },
+    assignToRoom: async (id: string, roomId: string): Promise<Device> => {
+      if (USE_MOCK || USE_MOCK_DEVICES) {
+        const dev = MockDB.devices.find(d => d.id === id);
+        if (dev) {
+          dev.roomId = roomId;
+          MockDB.addLog(`Device assigned to room: ${dev.name}`);
+        }
+        return mockCall(dev as Device);
+      }
+      return (await client.put(`/devices/${id}`, { roomId })).data;
     },
     create: async (data: Partial<Device> & { roomId?: string; bssid: string }): Promise<Device> => {
       if (USE_MOCK || USE_MOCK_DEVICES) {
         const newDevice = { 
           ...data, 
           id: Math.random().toString(), 
-          status: "ON", 
+          state: "ON", 
           speed: 0 
         } as Device;
         
@@ -122,8 +139,11 @@ export const api = {
     },
     delete: async (id: string) => {
        if (USE_MOCK || USE_MOCK_DEVICES) {
-        MockDB.devices = MockDB.devices.filter(d => d.id !== id);
-        MockDB.addLog(`Device removed: ${id}`, "WARNING");
+        const dev = MockDB.devices.find(d => d.id === id);
+        if (dev) {
+          dev.roomId = null;
+          MockDB.addLog(`Device unassigned: ${dev.name}`, "WARNING");
+        }
         return mockCall(true);
        }
        return (await client.delete(`/devices/${id}`)).data;
@@ -132,12 +152,12 @@ export const api = {
       if (USE_MOCK || USE_MOCK_DEVICES) {
         const dev = MockDB.devices.find(d => d.id === id);
         if (dev) {
-          if (command.action === "ON") dev.status = "ON";
-          if (command.action === "OFF") dev.status = "OFF";
+          if (command.action === "ON") dev.state = "ON";
+          if (command.action === "OFF") dev.state = "OFF";
           if (command.action === "SET_SPEED" && typeof command.speed === "number") {
              dev.speed = command.speed;
              // Auto turn on if speed > 0
-             if(dev.speed > 0) dev.status = "ON";
+             if(dev.speed > 0) dev.state = "ON";
           }
           MockDB.addLog(`Device ${dev.name} action: ${command.action} ${command.speed ?? ''}`);
         }

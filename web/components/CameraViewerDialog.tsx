@@ -61,9 +61,9 @@ export const CameraViewerDialog: React.FC<CameraViewerDialogProps> = ({
                   primary={<Typography className="text-white text-sm">{c.name}</Typography>}
                   secondary={
                     <Box className="flex items-center gap-1">
-                      <FiberManualRecord sx={{ fontSize: 8, color: c.status === 'ON' ? '#ef4444' : '#64748b' }} />
+                      <FiberManualRecord sx={{ fontSize: 8, color: c.state === 'ON' ? '#ef4444' : '#64748b' }} />
                       <Typography variant="caption" className="text-slate-500">
-                        {c.status === 'ON' ? 'Recording' : 'Idle'}
+                        {c.state === 'ON' ? 'Recording' : 'Idle'}
                       </Typography>
                     </Box>
                   }
@@ -88,7 +88,7 @@ export const CameraViewerDialog: React.FC<CameraViewerDialogProps> = ({
                 size="small"
                 className="font-bold animate-pulse"
               />
-              {activeCamera.status === 'ON' && (
+              {activeCamera.state === 'ON' && (
                 <Chip
                   icon={<FiberManualRecord className="animate-pulse" />}
                   label="REC"
@@ -112,14 +112,14 @@ export const CameraViewerDialog: React.FC<CameraViewerDialogProps> = ({
 
             <Box className="flex gap-2">
               <Button
-                variant={activeCamera.status === "ON" ? "contained" : "outlined"}
-                color={activeCamera.status === "ON" ? "error" : "inherit"}
+                variant={activeCamera.state === "ON" ? "contained" : "outlined"}
+                color={activeCamera.state === "ON" ? "error" : "inherit"}
                 size="small"
                 startIcon={<FiberManualRecord />}
-                onClick={() => onToggleRecording(activeCamera.id, activeCamera.status !== "ON")}
-                sx={{ color: activeCamera.status === "ON" ? "white" : "white" }}
+                onClick={() => onToggleRecording(activeCamera.id, activeCamera.state !== "ON")}
+                sx={{ color: activeCamera.state === "ON" ? "white" : "white" }}
               >
-                {activeCamera.status === "ON" ? "Stop Recording" : "Start Recording"}
+                {activeCamera.state === "ON" ? "Stop Recording" : "Start Recording"}
               </Button>
 
               <Button

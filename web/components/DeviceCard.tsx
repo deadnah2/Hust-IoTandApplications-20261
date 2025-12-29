@@ -27,6 +27,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+  const formatValue = (value?: number, suffix = "") => {
+    if (typeof value !== "number" || !Number.isFinite(value)) return `--${suffix}`;
+    return `${value.toFixed(2)}${suffix}`;
+  };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -42,8 +46,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   };
 
   const Icon = () => {
-    if (device.type === "LIGHT") return <Lightbulb color={device.status === "ON" ? "warning" : "disabled"} />;
-    if (device.type === "FAN") return <WindPower color={device.status === "ON" ? "info" : "disabled"} className={device.status === "ON" ? "animate-spin" : ""} />;
+    if (device.type === "LIGHT") return <Lightbulb color={device.state === "ON" ? "warning" : "disabled"} />;
+    if (device.type === "FAN") return <WindPower color={device.state === "ON" ? "info" : "disabled"} className={device.state === "ON" ? "animate-spin" : ""} />;
     if (device.type === "CAMERA") return <Videocam color="error" />;
     return <Thermostat color="primary" />;
   };
@@ -53,7 +57,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       <CardContent className="flex-grow">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-full ${device.status === 'ON' ? 'bg-blue-50' : 'bg-gray-100'}`}>
+            <div className={`p-2 rounded-full ${device.state === 'ON' ? 'bg-blue-50' : 'bg-gray-100'}`}>
               <Icon />
             </div>
             <div>
@@ -80,7 +84,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
               <span className="text-sm font-medium text-gray-600">Power</span>
               <Switch
-                checked={device.status === "ON"}
+                checked={device.state === "ON"}
                 onChange={(e) => onToggle(device.id, e.target.checked)}
                 color="warning"
               />
@@ -92,7 +96,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                 <span className="text-sm font-medium text-gray-600">Power</span>
                 <Switch
-                  checked={device.status === "ON"}
+                checked={device.state === "ON"}
                   onChange={(e) => onToggle(device.id, e.target.checked)}
                   color="info"
                 />
@@ -100,7 +104,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <div className="px-2">
                  <Typography variant="caption" className="text-gray-500">Speed: {device.speed}</Typography>
                  <Slider
-                    disabled={device.status === "OFF"}
+                    disabled={device.state === "OFF"}
                     value={device.speed || 0}
                     min={0}
                     max={3}
@@ -119,7 +123,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                  <img src={`https://picsum.photos/400/300?random=${device.id}`} alt="cam" className="opacity-60 object-cover w-full h-full" />
                  
                  <div className="absolute top-2 left-2 flex gap-1">
-                   {device.status === 'ON' && (
+                   {device.state === 'ON' && (
                      <Tooltip title="Recording">
                        <FiberManualRecord className="text-red-600 text-[10px] animate-pulse" fontSize="small" />
                      </Tooltip>
@@ -144,7 +148,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               </div>
               
               <Typography variant="caption" className="text-center block text-slate-400">
-                 {device.status === 'ON' ? 'Recording' : 'Idle'} • {device.humanDetectionEnabled ? 'Detection On' : 'Detection Off'}
+                 {device.state === 'ON' ? 'Recording' : 'Idle'} • {device.humanDetectionEnabled ? 'Detection On' : 'Detection Off'}
               </Typography>
             </div>
           )}
@@ -154,14 +158,14 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <Box className="bg-orange-50 p-3 rounded-xl flex flex-col items-center justify-center border border-orange-100">
                 <Thermostat className="text-orange-500 mb-1" fontSize="small" />
                 <Typography variant="h6" className="font-bold text-orange-700 leading-none">
-                  {device.temperature ?? "--"}°C
+                  {formatValue(device.temperature, "°C")}
                 </Typography>
                 <Typography variant="caption" className="text-orange-600 mt-1">Temp</Typography>
               </Box>
               <Box className="bg-blue-50 p-3 rounded-xl flex flex-col items-center justify-center border border-blue-100">
                 <WaterDrop className="text-blue-500 mb-1" fontSize="small" />
                 <Typography variant="h6" className="font-bold text-blue-700 leading-none">
-                  {device.humidity ?? "--"}%
+                  {formatValue(device.humidity, "%")}
                 </Typography>
                 <Typography variant="caption" className="text-blue-600 mt-1">Humidity</Typography>
               </Box>

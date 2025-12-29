@@ -35,7 +35,7 @@ const char* WIFI_PASS = "";
 // Sẽ nhận được URL dạng: tcp://0.tcp.ap.ngrok.io:12345
 
 const char* MQTT_BROKER = "0.tcp.ap.ngrok.io";  // ← Thay bằng hostname ngrok
-const int MQTT_PORT = 12345;                     // ← Thay bằng port ngrok
+const int MQTT_PORT = 14267;                     // ← Thay bằng port ngrok
 
 // ==================== BSSID CONFIG ====================
 // ⚠️ THAY BẰNG BSSID THẬT CỦA WIFI BẠN ĐANG TEST
@@ -45,7 +45,7 @@ const int MQTT_PORT = 12345;                     // ← Thay bằng port ngrok
 // - iOS: Dùng app Network Analyzer
 // Format: "AA:BB:CC:DD:EE:FF"
 
-const char* WIFI_BSSID = "32:c5:1b:f7:65:fa";   // BSSID của iPhone hotspot "Loc"
+const char* WIFI_BSSID = "e4:77:27:ce:78:ac";   // BSSID của iPhone hotspot "Loc"
 
 // ==================== OBJECTS ====================
 WiFiClient espClient;

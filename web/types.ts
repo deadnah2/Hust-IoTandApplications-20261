@@ -22,7 +22,7 @@ export interface Room {
 }
 
 export type DeviceType = "LIGHT" | "FAN" | "CAMERA" | "SENSOR";
-export type DeviceStatus = "ON" | "OFF";
+export type DeviceState = "ON" | "OFF";
 
 export interface Device {
   id: string;
@@ -32,7 +32,7 @@ export interface Device {
   controllerMAC?: string;
   bssid?: string;
   type: DeviceType;
-  status: DeviceStatus;
+  state: DeviceState;
   speed?: number; // 0-3 for FAN
   streamUrl?: string; // For CAMERA
   humanDetectionEnabled?: boolean; // For CAMERA
