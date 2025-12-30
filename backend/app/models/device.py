@@ -28,6 +28,7 @@ class Device(Document):
     # Sensor data
     temperature: Optional[float] = None  # For SENSOR: °C
     humidity: Optional[float] = None  # For SENSOR: %
+    lastSeen: Optional[datetime] = None
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)
 

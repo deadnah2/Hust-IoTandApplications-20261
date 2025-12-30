@@ -89,13 +89,25 @@ async def add_device(payload: str):
             device_in.name, device_in.controllerMAC
         )
         if existing_device:
-            print(f"Device with name '{device_in.name}' and MAC '{device_in.controllerMAC}' already exists.")
+            update_fields = {}
+            for key in ("bssid", "state", "type", "name", "streamUrl", "humanDetectionEnabled", "speed"):
+                if key in device_data:
+                    update_fields[key] = device_data[key]
+            from datetime import datetime
+            now = datetime.utcnow()
+            update_fields["lastSeen"] = now
+            update_fields["updatedAt"] = now
+            await existing_device.update({"$set": update_fields})
+            print(f"Device re-registered: {device_in.name}")
             return
 
         # Create new device
         new_device = await DeviceService.create_device(device_in)
         if new_device and new_device.controllerMAC:
             print(f"New device added: {new_device.name}")
+            from datetime import datetime
+            now = datetime.utcnow()
+            await new_device.update({"$set": {"lastSeen": now, "updatedAt": now}})
             # Subscribe to device's data topic
             topic = f"device/data/{new_device.controllerMAC}"
             client.subscribe(topic)
@@ -113,16 +125,21 @@ async def update_device_data(device_id: str, payload: str):
     Handle device/data/{id} message - update device sensor data
     """
     from app.models.device import Device
-    
+
     try:
         data = json.loads(payload)
-        
+
         # Find device by controllerMAC (device_id in topic)
         device = await Device.find_one(Device.controllerMAC == device_id)
-        
+
         if device:
-            update_fields = {}
-            
+            from datetime import datetime
+            now = datetime.utcnow()
+            update_fields = {
+                "lastSeen": now,
+                "updatedAt": now,
+            }
+
             # Update sensor data if present
             if "temperature" in data:
                 update_fields["temperature"] = data["temperature"]
@@ -136,14 +153,11 @@ async def update_device_data(device_id: str, payload: str):
                     update_fields["state"] = "OFF"
             if "speed" in data:
                 update_fields["speed"] = data["speed"]
-                
-            if update_fields:
-                from datetime import datetime
-                update_fields["updatedAt"] = datetime.utcnow()
-                await device.update({"$set": update_fields})
-                print(f"📊 Device {device_id} data updated: {update_fields}")
+
+            await device.update({"$set": update_fields})
+            print(f"Device {device_id} data updated: {update_fields}")
         else:
-            print(f"⚠️ Device not found: {device_id}")
-            
+            print(f"Device not found: {device_id}")
+
     except Exception as e:
-        print(f"❌ Error updating device data: {e}")
+        print(f"Error updating device data: {e}")

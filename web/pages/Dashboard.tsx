@@ -44,7 +44,7 @@ const DevicesTab = ({
 };
 
 const ActivityTab = () => {
-    const { data: logs } = useQuery({ queryKey: ['logs'], queryFn: api.logs.list, refetchInterval: 2000 });
+    const { data: logs } = useQuery({ queryKey: ['logs'], queryFn: api.logs.list, refetchInterval: 1500 });
 
     return (
         <div className="bg-white rounded-lg shadow p-4">

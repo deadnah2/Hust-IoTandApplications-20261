@@ -33,11 +33,13 @@ export interface Device {
   bssid?: string;
   type: DeviceType;
   state: DeviceState;
+  isOnline?: boolean;
   speed?: number; // 0-3 for FAN
   streamUrl?: string; // For CAMERA
   humanDetectionEnabled?: boolean; // For CAMERA
   temperature?: number; // For SENSOR (°C)
   humidity?: number; // For SENSOR (%)
+  lastSeen?: string;
   createdAt?: string;
   updatedAt?: string;
 }

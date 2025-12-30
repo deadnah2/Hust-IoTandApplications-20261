@@ -1,4 +1,5 @@
 from typing import List
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from app.api import deps
@@ -11,6 +12,7 @@ import asyncio
 import cv2
 
 router = APIRouter()
+DEVICE_OFFLINE_SECONDS = 7
 
 # Helper function to convert Device model to DeviceResponse
 def device_to_response(device: Device) -> DeviceResponse:
@@ -21,6 +23,15 @@ def device_to_response(device: Device) -> DeviceResponse:
         state = "OFF"
     else:
         state = "OFF"
+
+    is_online = None
+    device_type = str(device.type).strip().upper()
+    if device_type in ("SENSOR", "FAN"):
+        if device.lastSeen is None:
+            is_online = False
+        else:
+            delta = datetime.utcnow() - device.lastSeen
+            is_online = delta.total_seconds() <= DEVICE_OFFLINE_SECONDS
 
     return DeviceResponse(
         id=str(device.id),
@@ -36,6 +47,8 @@ def device_to_response(device: Device) -> DeviceResponse:
         humanDetectionEnabled=device.humanDetectionEnabled,
         temperature=device.temperature,
         humidity=device.humidity,
+        lastSeen=device.lastSeen,
+        isOnline=is_online,
         createdAt=device.createdAt,
         updatedAt=device.updatedAt
     )

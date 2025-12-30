@@ -44,6 +44,8 @@ class DeviceResponse(BaseModel):
     # Sensor data
     temperature: Optional[float] = None
     humidity: Optional[float] = None
+    lastSeen: Optional[datetime] = None
+    isOnline: Optional[bool] = None
     createdAt: datetime
     updatedAt: datetime
 
