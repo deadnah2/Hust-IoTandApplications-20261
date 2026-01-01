@@ -110,7 +110,7 @@ async def send_command(
 @router.get("/camera-stream")
 async def camera_stream(
     device_id: str,
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.get_current_user_from_query)
 ):
     device = await DeviceService.get_device_by_id(device_id, current_user)
     if not device or not device.streamUrl:

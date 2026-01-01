@@ -185,6 +185,11 @@ export const api = {
       }
       // BE chưa có endpoint riêng cho human detection, dùng update
       return (await client.put(`/devices/${id}`, { humanDetectionEnabled: enabled })).data;
+    },
+    // Helper để lấy URL stream camera (dùng cho <img> tag)
+    getCameraStreamUrl: (deviceId: string): string => {
+      const token = localStorage.getItem("id_token");
+      return `${API_BASE_URL}/devices/camera-stream?device_id=${deviceId}&token=${token}`;
     }
   },
 

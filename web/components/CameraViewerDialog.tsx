@@ -5,6 +5,8 @@ import {
 } from "@mui/material";
 import { Close, Videocam, FiberManualRecord, Security, History as HistoryIcon } from "@mui/icons-material";
 import { Device } from "../types";
+import { api } from "../services/api";
+import { USE_MOCK, USE_MOCK_DEVICES } from "../constants";
 
 interface CameraViewerDialogProps {
   open: boolean;
@@ -77,7 +79,11 @@ export const CameraViewerDialog: React.FC<CameraViewerDialogProps> = ({
         <Box className="flex-1 flex flex-col bg-black relative">
           <Box className="flex-1 relative overflow-hidden flex items-center justify-center">
             <img
-              src={`https://picsum.photos/1280/720?random=${activeCamera.id}`}
+              src={
+                USE_MOCK || USE_MOCK_DEVICES
+                  ? `https://picsum.photos/1280/720?random=${activeCamera.id}`
+                  : api.devices.getCameraStreamUrl(activeCamera.id)
+              }
               alt="Live"
               className="w-full h-full object-contain opacity-90"
             />
