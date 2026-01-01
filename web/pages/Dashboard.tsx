@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Typography, Button, Tabs, Tab, Box, Dialog, DialogTitle,
-  DialogContent, DialogActions, TextField, Select, MenuItem,
-  FormControl, InputLabel, Alert, CircularProgress
+  DialogContent, DialogActions, TextField, Alert, CircularProgress,
+  List, ListItemButton, ListItemText, ListItemIcon, Radio
 } from "@mui/material";
 import { Add, Refresh } from "@mui/icons-material";
 import { useForm } from "react-hook-form";
@@ -13,7 +13,7 @@ import { Layout } from "../components/Layout";
 import { DeviceCard } from "../components/DeviceCard";
 import { CameraViewerDialog } from "../components/CameraViewerDialog";
 import { RecordingsDialog } from "../components/RecordingsDialog";
-import { createHomeSchema, createRoomSchema, createDeviceSchema, Device, Room } from "../types";
+import { createHomeSchema, createRoomSchema, Device, Room } from "../types";
 
 // --- Sub-components for Tabs ---
 
@@ -44,7 +44,7 @@ const DevicesTab = ({
 };
 
 const ActivityTab = () => {
-    const { data: logs } = useQuery({ queryKey: ['logs'], queryFn: api.logs.list, refetchInterval: 2000 });
+    const { data: logs } = useQuery({ queryKey: ['logs'], queryFn: api.logs.list, refetchInterval: 1500 });
 
     return (
         <div className="bg-white rounded-lg shadow p-4">
@@ -87,6 +87,17 @@ export const Dashboard = () => {
     const [isCameraViewerOpen, setCameraViewerOpen] = useState(false);
     const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
     const [recordingsTarget, setRecordingsTarget] = useState<Device | null>(null);
+    const [lanBssid, setLanBssid] = useState("");
+    const [lanDevices, setLanDevices] = useState<Device[]>([]);
+    const [selectedLanDeviceId, setSelectedLanDeviceId] = useState<string | null>(null);
+    const [hasSearchedLan, setHasSearchedLan] = useState(false);
+
+    const resetAddDeviceDialog = () => {
+        setLanBssid("");
+        setLanDevices([]);
+        setSelectedLanDeviceId(null);
+        setHasSearchedLan(false);
+    };
 
     // Queries
     const { data: houses = [] } = useQuery({ queryKey: ['houses'], queryFn: api.homes.list });
@@ -131,7 +142,9 @@ export const Dashboard = () => {
     const { data: devices = [], isLoading: devicesLoading } = useQuery({
         queryKey: ['devices', selectedRoomId],
         queryFn: () => selectedRoomId ? api.devices.list(selectedRoomId) : Promise.resolve([]),
-        enabled: !!selectedRoomId
+        enabled: !!selectedRoomId,
+        refetchInterval: 2000,
+        refetchIntervalInBackground: true
     });
 
     // Mutations
@@ -178,18 +191,28 @@ export const Dashboard = () => {
         }
     });
 
-    const addDeviceMutation = useMutation({
-        mutationFn: (data: any) => api.devices.create({ ...data, roomId: selectedRoomId }),
+    const discoverDevicesMutation = useMutation({
+        mutationFn: (bssid: string) => api.devices.discover(bssid),
+        onSuccess: (foundDevices) => {
+            setLanDevices(foundDevices);
+            setSelectedLanDeviceId(foundDevices[0]?.id ?? null);
+            setHasSearchedLan(true);
+        }
+    });
+
+    const assignDeviceMutation = useMutation({
+        mutationFn: (data: { deviceId: string; roomId: string }) =>
+            api.devices.assignToRoom(data.deviceId, data.roomId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['devices'] });
             setAddDeviceOpen(false);
+            resetAddDeviceDialog();
         }
     });
 
     // Forms
     const { register: regHome, handleSubmit: subHome, reset: resetHome } = useForm({ resolver: zodResolver(createHomeSchema) });
     const { register: regRoom, handleSubmit: subRoom, reset: resetRoom } = useForm({ resolver: zodResolver(createRoomSchema) });
-    const { register: regDev, handleSubmit: subDev, reset: resetDev } = useForm({ resolver: zodResolver(createDeviceSchema) });
 
     // Handlers
     const handleSelectHome = (homeId: string) => {
@@ -205,6 +228,29 @@ export const Dashboard = () => {
         setAddRoomForHomeId(homeId);
         resetRoom();
         setAddRoomOpen(true);
+    };
+
+    const handleOpenAddDevice = () => {
+        resetAddDeviceDialog();
+        setAddDeviceOpen(true);
+    };
+
+    const handleDiscoverDevices = () => {
+        const bssid = lanBssid.trim();
+        if (!bssid) {
+            return;
+        }
+        setLanDevices([]);
+        setSelectedLanDeviceId(null);
+        setHasSearchedLan(false);
+        discoverDevicesMutation.mutate(bssid);
+    };
+
+    const handleAssignDevice = () => {
+        if (!selectedRoomId || !selectedLanDeviceId) {
+            return;
+        }
+        assignDeviceMutation.mutate({ deviceId: selectedLanDeviceId, roomId: selectedRoomId });
     };
 
     const handleToggle = (id: string, state: boolean) => toggleMutation.mutate({ id, state });
@@ -316,7 +362,7 @@ export const Dashboard = () => {
                     <Button
                         variant="contained"
                         startIcon={<Add />}
-                        onClick={() => { resetDev(); setAddDeviceOpen(true); }}
+                        onClick={handleOpenAddDevice}
                     >
                         Add Device
                     </Button>
@@ -420,48 +466,69 @@ export const Dashboard = () => {
             </Dialog>
 
             {/* Add Device Dialog */}
-            <Dialog open={isAddDeviceOpen} onClose={() => setAddDeviceOpen(false)}>
-                <form onSubmit={subDev((d) => addDeviceMutation.mutate(d))}>
-                    <DialogTitle>Add Device</DialogTitle>
-                    <DialogContent className="flex flex-col gap-4 min-w-[350px] pt-4">
-                        <TextField 
-                            label="Device Name" 
-                            fullWidth 
-                            variant="outlined" 
-                            placeholder="e.g., Living Room Light"
-                            {...regDev("name")} 
-                        />
-                        <TextField 
-                            label="BSSID (WiFi MAC)" 
-                            fullWidth 
-                            variant="outlined" 
-                            placeholder="AA:BB:CC:DD:EE:FF"
-                            {...regDev("bssid")} 
-                        />
-                        <TextField 
-                            label="Controller MAC (Optional)" 
-                            fullWidth 
-                            variant="outlined" 
-                            placeholder="11:22:33:44:55:66"
-                            {...regDev("controllerMAC")} 
-                        />
-                        <FormControl fullWidth>
-                            <InputLabel>Type</InputLabel>
-                            <Select label="Type" defaultValue="LIGHT" {...regDev("type")}>
-                                <MenuItem value="LIGHT">💡 Light</MenuItem>
-                                <MenuItem value="FAN">🌀 Fan</MenuItem>
-                                <MenuItem value="CAMERA">📷 Camera</MenuItem>
-                                <MenuItem value="SENSOR">🌡️ Sensor (Temp/Hum)</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setAddDeviceOpen(false)}>Cancel</Button>
-                        <Button type="submit" variant="contained" disabled={addDeviceMutation.isPending}>
-                            {addDeviceMutation.isPending ? "Adding..." : "Add Device"}
-                        </Button>
-                    </DialogActions>
-                </form>
+            <Dialog
+                open={isAddDeviceOpen}
+                onClose={() => { setAddDeviceOpen(false); resetAddDeviceDialog(); }}
+            >
+                <DialogTitle>Add Device</DialogTitle>
+                <DialogContent className="flex flex-col gap-4 min-w-[360px] pt-4">
+                    <TextField 
+                        autoFocus
+                        label="WiFi BSSID" 
+                        fullWidth 
+                        variant="outlined" 
+                        placeholder="AA:BB:CC:DD:EE:FF"
+                        value={lanBssid}
+                        onChange={(e) => setLanBssid(e.target.value)}
+                        helperText="Enter the BSSID of the WiFi the device is connected to."
+                    />
+                    <Button
+                        variant="outlined"
+                        onClick={handleDiscoverDevices}
+                        disabled={!lanBssid.trim() || discoverDevicesMutation.isPending}
+                    >
+                        {discoverDevicesMutation.isPending ? "Searching..." : "Search Devices"}
+                    </Button>
+                    {discoverDevicesMutation.isPending && (
+                        <Box className="flex justify-center py-2">
+                            <CircularProgress size={24} />
+                        </Box>
+                    )}
+                    {hasSearchedLan && !discoverDevicesMutation.isPending && lanDevices.length === 0 && (
+                        <Alert severity="info">
+                            No devices found. Make sure the device is online and registered on this WiFi.
+                        </Alert>
+                    )}
+                    {lanDevices.length > 0 && (
+                        <List dense className="border border-slate-200 rounded-md">
+                            {lanDevices.map((device) => (
+                                <ListItemButton
+                                    key={device.id}
+                                    selected={selectedLanDeviceId === device.id}
+                                    onClick={() => setSelectedLanDeviceId(device.id)}
+                                >
+                                    <ListItemIcon>
+                                        <Radio checked={selectedLanDeviceId === device.id} />
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={device.name}
+                                        secondary={`${device.type} - ${device.controllerMAC || "Unknown MAC"}`}
+                                    />
+                                </ListItemButton>
+                            ))}
+                        </List>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => { setAddDeviceOpen(false); resetAddDeviceDialog(); }}>Cancel</Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleAssignDevice}
+                        disabled={!selectedLanDeviceId || assignDeviceMutation.isPending}
+                    >
+                        {assignDeviceMutation.isPending ? "Adding..." : "Add Device"}
+                    </Button>
+                </DialogActions>
             </Dialog>
         </Layout>
     );

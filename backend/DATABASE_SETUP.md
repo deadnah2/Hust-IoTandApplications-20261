@@ -13,7 +13,8 @@ Before running the migration scripts, ensure you have:
    MONGO_ROOT_PASSWORD=change_me
    MONGO_DATABASE_NAME=smarthome
    MONGO_HOST=localhost
-   MONGO_PORT=27017
+   MONGO_PORT=27018
+   MONGODB_URL=mongodb://admin:change_me@localhost:27018/?authSource=admin
    SECRET_KEY=your-secret-key-here
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -23,6 +24,74 @@ Before running the migration scripts, ensure you have:
    ```bash
    pip install -r requirements.txt
    ```
+
+## Terminal-by-terminal run (fresh DB)
+
+Use this when a teammate already has old Mongo data (for example from ESP32-CAM) and you want a clean DB.
+
+### Terminal 1 - Docker (reset DB + start services)
+
+```bash
+cd backend
+docker compose down -v
+docker compose up -d
+docker compose ps
+```
+
+If you still see old data, remove the named volumes and start again:
+
+```bash
+docker volume rm backend_mongodb_data backend_mongodb_config
+docker compose up -d
+```
+
+### Terminal 2 - Backend API
+
+```bash
+cd backend
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python setup_database.py
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+If you use `venv` instead of `.venv`, activate it with:
+
+```bash
+.\venv\Scripts\Activate.ps1
+```
+
+### Terminal 3 - Frontend
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+### Terminal 4 - MQTT tunnel and simulators (only if using Wokwi)
+
+```bash
+ngrok tcp 1883
+```
+
+Copy the ngrok host and port into:
+- `ESP32-Sensor/src/main.cpp`
+- `ESP32-Fan/src/main.cpp`
+
+Then run the simulators in Wokwi and register devices over MQTT.
+
+### Terminal 5 - Quick checks
+
+```bash
+curl http://localhost:8000/
+```
+
+Open the frontend in a browser (default Vite port is 5173):
+
+```bash
+http://localhost:5173/
+```
 
 ## 🚀 Quick Start
 

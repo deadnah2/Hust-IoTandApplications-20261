@@ -10,19 +10,43 @@ const room2: Room = { id: "r2", homeId: "h1", name: "Bedroom" };
 
 const devices: Device[] = [
   // Room 1: Camera + Light
-  { id: "d1", roomId: "r1", name: "Main Camera", type: "CAMERA", status: "ON", streamUrl: "", humanDetectionEnabled: false },
-  { id: "d2", roomId: "r1", name: "Ceiling Light", type: "LIGHT", status: "OFF" },
+  { id: "d1", roomId: "r1", name: "Main Camera", type: "CAMERA", state: "ON", streamUrl: "", humanDetectionEnabled: false, bssid: "32:c5:1b:f7:65:fa", controllerMAC: "CAM_0001" },
+  { id: "d2", roomId: "r1", name: "Ceiling Light", type: "LIGHT", state: "OFF", bssid: "32:c5:1b:f7:65:fa", controllerMAC: "LIGHT_0001" },
   // Room 2: Fan + Light + Sensor
-  { id: "d3", roomId: "r2", name: "Stand Fan", type: "FAN", status: "OFF", speed: 0 },
-  { id: "d4", roomId: "r2", name: "Night Light", type: "LIGHT", status: "ON" },
+  { id: "d3", roomId: "r2", name: "Stand Fan", type: "FAN", state: "OFF", speed: 0, bssid: "32:c5:1b:f7:65:fa", controllerMAC: "FAN_0001" },
+  { id: "d4", roomId: "r2", name: "Night Light", type: "LIGHT", state: "ON", bssid: "32:c5:1b:f7:65:fa", controllerMAC: "LIGHT_0002" },
   { 
     id: "d5", 
     roomId: "r2", 
     name: "Climate Sensor", 
     type: "SENSOR", 
-    status: "ON", 
+    state: "ON", 
     temperature: 24.5, 
-    humidity: 62 
+    humidity: 62,
+    bssid: "32:c5:1b:f7:65:fa",
+    controllerMAC: "SENSOR_0001"
+  },
+  // Unassigned devices discovered in LAN
+  {
+    id: "d6",
+    roomId: null,
+    name: "New Fan",
+    type: "FAN",
+    state: "OFF",
+    speed: 0,
+    bssid: "32:c5:1b:f7:65:fa",
+    controllerMAC: "FAN_0110"
+  },
+  {
+    id: "d7",
+    roomId: null,
+    name: "Temp Sensor",
+    type: "SENSOR",
+    state: "ON",
+    temperature: 26.1,
+    humidity: 58,
+    bssid: "32:c5:1b:f7:65:fa",
+    controllerMAC: "SENSOR_0110"
   },
 ];
 

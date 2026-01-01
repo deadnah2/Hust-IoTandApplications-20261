@@ -11,8 +11,8 @@ class DeviceType(str, Enum):
     SENSOR = "SENSOR"
 
 class DeviceState(str, Enum):
-    ON = "ONLINE"
-    OFF = "OFFLINE"
+    ON = "ON"
+    OFF = "OFF"
 
 class Device(Document):
     roomId: Optional[Indexed(PydanticObjectId)] = None
@@ -27,6 +27,7 @@ class Device(Document):
     humanDetectionEnabled: Optional[bool] = False
     temperature: Optional[float] = None  # For SENSOR: °C
     humidity: Optional[float] = None  # For SENSOR: %
+    lastSeen: Optional[datetime] = None
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)
 
