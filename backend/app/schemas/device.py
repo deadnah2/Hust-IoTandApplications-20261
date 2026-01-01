@@ -22,7 +22,7 @@ class DeviceUpdate(BaseModel):
     custom_name: Optional[str] = None
     roomId: Optional[str] = None
 
-class DeviceCommand(BaseModel):
+class DeviceControl(BaseModel):
     type: DeviceType
     state: DeviceState
     speed: Optional[int] = None
@@ -40,9 +40,7 @@ class DeviceResponse(BaseModel):
     type: DeviceType
     state: DeviceState
     speed: Optional[int] = None
-    streamUrl: Optional[str] = None
     humanDetectionEnabled: Optional[bool] = None
-    # Sensor data
     temperature: Optional[float] = None
     humidity: Optional[float] = None
     lastSeen: Optional[datetime] = None

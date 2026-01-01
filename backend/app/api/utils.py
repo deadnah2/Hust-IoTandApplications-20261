@@ -36,7 +36,6 @@ def device_to_response(device: Device) -> DeviceResponse:
         type=device.type,
         state=device.state,
         speed=device.speed,
-        streamUrl=device.streamUrl,
         humanDetectionEnabled=device.humanDetectionEnabled,
         temperature=device.temperature,
         humidity=device.humidity,

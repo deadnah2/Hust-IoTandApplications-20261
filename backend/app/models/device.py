@@ -23,7 +23,6 @@ class Device(Document):
     type: str = Field(default=DeviceType.LIGHT)  # Store as string
     state: str = Field(default=DeviceState.OFF)  # Store as string
     speed: Optional[int] = 0 # For FAN: 0..3
-    streamUrl: Optional[str] = None # For CAMERA
     humanDetectionEnabled: Optional[bool] = False
     temperature: Optional[float] = None  # For SENSOR: °C
     humidity: Optional[float] = None  # For SENSOR: %
