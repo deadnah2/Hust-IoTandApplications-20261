@@ -11,6 +11,8 @@ import {
   WaterDrop 
 } from "@mui/icons-material";
 import { Device } from "../types";
+import { api } from "../services/api";
+import { USE_MOCK, USE_MOCK_DEVICES } from "../constants";
 
 interface DeviceCardProps {
   device: Device;
@@ -131,7 +133,15 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
           {device.type === "CAMERA" && (
             <div className="space-y-3">
               <div className="w-full h-32 bg-black rounded-lg flex items-center justify-center relative overflow-hidden group border border-slate-200">
-                 <img src={`https://picsum.photos/400/300?random=${device.id}`} alt="cam" className="opacity-60 object-cover w-full h-full" />
+                 <img 
+                   src={
+                     USE_MOCK || USE_MOCK_DEVICES
+                       ? `https://picsum.photos/400/300?random=${device.id}`
+                       : api.devices.getCameraStreamUrl(device.id)
+                   } 
+                   alt="cam" 
+                   className="opacity-60 object-cover w-full h-full" 
+                 />
                  
                  <div className="absolute top-2 left-2 flex gap-1">
                    {device.state === 'ON' && (

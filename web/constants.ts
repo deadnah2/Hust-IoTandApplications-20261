@@ -2,9 +2,9 @@
 // Casting to any to avoid TS errors if types are missing
 const env = (import.meta as any).env || {};
 
-// Default to true (Mock Mode) unless explicitly set to false
-export const USE_MOCK = env.VITE_USE_MOCK !== 'false';
-export const USE_MOCK_DEVICES = env.VITE_USE_MOCK_DEVICES !== 'false';
+// Default to false (Real Mode) - set to 'true' in .env to use mock data
+export const USE_MOCK = env.VITE_USE_MOCK === 'true';
+export const USE_MOCK_DEVICES = env.VITE_USE_MOCK_DEVICES === 'true';
 export const API_BASE_URL = env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 export const ROUTES = {
