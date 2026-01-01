@@ -1,5 +1,4 @@
 # Database Management Package
-from .migrate import migrate
 from .seed import seed_data
 from .db_manager import (
     check_connection,
@@ -12,7 +11,6 @@ from .db_manager import (
 )
 
 __all__ = [
-    "migrate",
     "seed_data", 
     "check_connection",
     "get_database_status",

@@ -2,6 +2,7 @@ from typing import List, Optional
 from datetime import datetime
 from app.models.home import Home
 from app.models.room import Room
+from app.models.device import Device
 from app.models.user import User
 from app.schemas.room import RoomCreate, RoomUpdate
 from app.services.home import HomeService
@@ -54,7 +55,11 @@ class RoomService:
     async def delete_room(room_id: str, user: User) -> bool:
         room = await RoomService.get_room_by_id(room_id, user)
         if room:
-            # Note: This doesn't delete devices within the room.
+            # Unassign all devices in this room before deleting
+            devices = await Device.find(Device.roomId == PydanticObjectId(room_id)).to_list()
+            for device in devices:
+                await device.update({"$set": {"roomId": None, "updatedAt": datetime.utcnow()}})
+            
             await room.delete()
             return True
         return False

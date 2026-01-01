@@ -63,10 +63,9 @@ async def main():
     if success:
         print("\n✅ Database setup completed successfully!")
         print("\n🔐 Test Accounts Created:")
-        print("• Admin: admin / admin123")
-        print("• User1: john_doe / john123")
-        print("• User2: jane_smith / jane123")
-        print("• User3: bob_wilson / bob123")
+        print("• admin1 / admin1 - BSSID: 11:11:11:11:11:11")
+        print("• admin2 / admin2 - BSSID: 22:22:22:22:22:22")
+        print("• admin3 / admin3 - BSSID: 33:33:33:33:33:33")
         print("\n📚 You can now start the FastAPI server:")
         print("  uvicorn app.main:app --reload")
     else:

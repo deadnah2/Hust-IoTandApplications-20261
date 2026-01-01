@@ -2,6 +2,7 @@
 """
 Database Seeding Script
 Seed the database with sample data for testing and development
+3 Admin users with unique BSSIDs for demo purposes
 """
 import asyncio
 import sys
@@ -23,6 +24,11 @@ from app.models.activity_log import ActivityLog, LogType
 from app.core.security import get_password_hash
 from app.core.config import settings
 
+# BSSID riêng cho từng admin (giả lập mỗi nhà 1 mạng WiFi khác nhau)
+BSSID_ADMIN1 = "11:11:11:11:11:11"
+BSSID_ADMIN2 = "22:22:22:22:22:22"
+BSSID_ADMIN3 = "33:33:33:33:33:33"
+
 
 async def clear_all_data():
     """Clear all existing data from the database"""
@@ -39,350 +45,268 @@ async def clear_all_data():
     print("All data cleared successfully!")
 
 
-async def create_sample_users():
-    """Create sample users"""
-    print("Creating sample users...")
+async def create_admin_users():
+    """Create 3 admin users with password = username"""
+    print("Creating admin users...")
     
-    # Create admin user
-    admin_user = User(
-        username="admin",
-        email="admin@smarthome.com",
-        passwordHash=get_password_hash("admin123"),
-    )
-    await admin_user.save()
-    print(f"✓ Created admin user: {admin_user.username}")
-    
-    # Create test users
-    test_users = [
-        {
-            "username": "john_doe",
-            "email": "john@example.com",
-            "password": "john123"
-        },
-        {
-            "username": "jane_smith", 
-            "email": "jane@example.com",
-            "password": "jane123"
-        },
-        {
-            "username": "bob_wilson",
-            "email": "bob@example.com", 
-            "password": "bob123"
-        }
+    admins = []
+    admin_configs = [
+        {"username": "admin1", "email": "admin1@smarthome.com"},
+        {"username": "admin2", "email": "admin2@smarthome.com"},
+        {"username": "admin3", "email": "admin3@smarthome.com"},
     ]
     
-    created_users = []
-    for user_data in test_users:
+    for config in admin_configs:
         user = User(
-            username=user_data["username"],
-            email=user_data["email"],
-            passwordHash=get_password_hash(user_data["password"]),
+            username=config["username"],
+            email=config["email"],
+            passwordHash=get_password_hash(config["username"]),  # password = username
         )
         await user.save()
-        created_users.append(user)
-        print(f"✓ Created user: {user.username}")
+        admins.append(user)
+        print(f"✓ Created user: {user.username} (password: {config['username']})")
     
-    return admin_user, created_users
+    return admins
 
 
-async def create_sample_homes(admin_user, test_users):
-    """Create sample homes"""
-    print("Creating sample homes...")
+async def create_homes_for_admins(admins):
+    """Create homes for each admin with unique BSSID"""
+    print("Creating homes...")
+    
+    home_configs = [
+        {
+            "name": "Nhà Hà Nội",
+            "location": "123 Đường Láng, Đống Đa, Hà Nội",
+            "bssid": BSSID_ADMIN1
+        },
+        {
+            "name": "Căn hộ Sài Gòn",
+            "location": "456 Nguyễn Huệ, Quận 1, TP.HCM",
+            "bssid": BSSID_ADMIN2
+        },
+        {
+            "name": "Biệt thự Đà Nẵng",
+            "location": "789 Võ Nguyên Giáp, Sơn Trà, Đà Nẵng",
+            "bssid": BSSID_ADMIN3
+        },
+    ]
     
     homes = []
-    
-    # Admin's home
-    admin_home = Home(
-        ownerUserId=admin_user.id,
-        name="Admin's Smart Villa",
-        location="123 Luxury Lane, Beverly Hills, CA"
-    )
-    await admin_home.save()
-    # Update admin user's home_ids
-    admin_user.home_ids = [admin_home.id]
-    await admin_user.save()
-    homes.append(admin_home)
-    print(f"✓ Created home: {admin_home.name}")
-    
-    # Create homes for each test user
-    home_names = [
-        "Cozy Family House",
-        "Modern Apartment", 
-        "Traditional Cottage"
-    ]
-    
-    locations = [
-        "456 Oak Street, San Francisco, CA",
-        "789 Pine Avenue, Los Angeles, CA", 
-        "321 Elm Drive, Seattle, WA"
-    ]
-    
-    for i, user in enumerate(test_users):
+    for i, admin in enumerate(admins):
+        config = home_configs[i]
         home = Home(
-            ownerUserId=user.id,
-            name=home_names[i],
-            location=locations[i]
+            ownerUserId=admin.id,
+            name=config["name"],
+            location=config["location"],
+            bssid=config["bssid"]
         )
         await home.save()
+        
         # Update user's home_ids
-        user.home_ids = [home.id]
-        await user.save()
+        admin.home_ids = [home.id]
+        await admin.save()
+        
         homes.append(home)
-        print(f"✓ Created home: {home.name}")
+        print(f"✓ Created home: {home.name} (BSSID: {config['bssid']})")
     
-    return admin_home, homes[1:]  # Return admin_home separately and other homes
+    return homes
 
 
-async def create_sample_rooms(admin_home, user_homes):
-    """Create sample rooms for homes"""
-    print("Creating sample rooms...")
+async def create_rooms_for_homes(homes):
+    """Create rooms for each home"""
+    print("Creating rooms...")
     
-    rooms = []
+    room_configs = [
+        # Admin1 - Nhà Hà Nội: 3 rooms
+        ["Phòng khách", "Phòng ngủ", "Nhà bếp"],
+        # Admin2 - Căn hộ Sài Gòn: 2 rooms  
+        ["Phòng khách", "Phòng ngủ chính"],
+        # Admin3 - Biệt thự Đà Nẵng: 4 rooms
+        ["Đại sảnh", "Phòng ngủ 1", "Phòng ngủ 2", "Sân vườn"],
+    ]
     
-    # Room templates for different home types
-    admin_rooms = ["Living Room", "Master Bedroom", "Guest Room", "Kitchen", "Home Office", "Garage"]
-    user_rooms = ["Living Room", "Bedroom", "Kitchen", "Bathroom"]
+    all_rooms = {}  # {home_id: [rooms]}
     
-    # Create rooms for admin home
-    for room_name in admin_rooms:
-        room = Room(homeId=admin_home.id, name=room_name)
-        await room.save()
-        rooms.append(room)
-        print(f"✓ Created room: {room_name} in admin home")
-    
-    # Create rooms for user homes
-    for home in user_homes:
-        for room_name in user_rooms:
+    for i, home in enumerate(homes):
+        rooms = []
+        for room_name in room_configs[i]:
             room = Room(homeId=home.id, name=room_name)
             await room.save()
             rooms.append(room)
             print(f"✓ Created room: {room_name} in {home.name}")
+        all_rooms[home.id] = rooms
     
-    return rooms
+    return all_rooms
 
 
-async def create_sample_devices(rooms):
-    """Create sample devices for rooms"""
-    print("Creating sample devices...")
+async def create_devices_for_rooms(homes, all_rooms):
+    """Create devices for each room with correct BSSID"""
+    print("Creating devices...")
     
     devices = []
-    device_counter = 0
     
-    def generate_bssid(counter):
-        """Generate a fake BSSID for seed data"""
-        return f"AA:BB:CC:DD:EE:{counter:02X}"
+    # ==================== ADMIN1 DEVICES ====================
+    home1 = homes[0]
+    rooms1 = all_rooms[home1.id]
+    room1_living = rooms1[0]  # Phòng khách
+    room1_bedroom = rooms1[1]  # Phòng ngủ
     
-    def generate_mac(counter):
-        """Generate a fake MAC address for seed data"""
-        return f"11:22:33:44:55:{counter:02X}"
+    # Phòng khách admin1
+    devices.extend([
+        await create_device(room1_living.id, "Smart Fan", BSSID_ADMIN1, "FAN_A1B2", 
+                           DeviceType.FAN, DeviceState.OFF, speed=0),
+        await create_device(room1_living.id, "Temperature Sensor", BSSID_ADMIN1, "SENSOR_C3D4",
+                           DeviceType.SENSOR, DeviceState.ON, temperature=25.5, humidity=60.0),
+        await create_device(room1_living.id, "Security Camera", BSSID_ADMIN1, "CAM_E5F6",
+                           DeviceType.CAMERA, DeviceState.ON, 
+                           streamUrl="rtsp://192.168.1.100:554/stream1", humanDetectionEnabled=True),
+    ])
     
-    # Get rooms by name for easier assignment
-    living_rooms = [r for r in rooms if "Living Room" in r.name]
-    bedrooms = [r for r in rooms if "Bedroom" in r.name]
-    kitchens = [r for r in rooms if "Kitchen" in r.name]
+    # Phòng ngủ admin1
+    devices.extend([
+        await create_device(room1_bedroom.id, "Bedroom Light", BSSID_ADMIN1, "LIGHT_G7H8",
+                           DeviceType.LIGHT, DeviceState.OFF),
+        await create_device(room1_bedroom.id, "Bedroom Fan", BSSID_ADMIN1, "FAN_I9J0",
+                           DeviceType.FAN, DeviceState.ON, speed=2),
+    ])
     
-    # Create devices for living rooms
-    for living_room in living_rooms:
-        device_counter += 1
-        # Smart light
-        light = Device(
-            roomId=living_room.id,
-            name="Smart LED Light",
-            bssid=generate_bssid(device_counter),
-            controllerMAC=generate_mac(device_counter),
-            type=DeviceType.LIGHT,
-            state=DeviceState.OFF
-        )
-        await light.save()
-        devices.append(light)
-        print(f"✓ Created device: {light.name} in {living_room.name}")
-        
-        device_counter += 1
-        # Smart fan
-        fan = Device(
-            roomId=living_room.id,
-            name="Smart Ceiling Fan",
-            bssid=generate_bssid(device_counter),
-            controllerMAC=generate_mac(device_counter),
-            type=DeviceType.FAN,
-            state=DeviceState.OFF,
-            speed=0
-        )
-        await fan.save()
-        devices.append(fan)
-        print(f"✓ Created device: {fan.name} in {living_room.name}")
-        
-        # Security camera (only for first living room)
-        if living_room == living_rooms[0]:
-            device_counter += 1
-            camera = Device(
-                roomId=living_room.id,
-                name="Security Camera",
-                bssid=generate_bssid(device_counter),
-                controllerMAC=generate_mac(device_counter),
-                type=DeviceType.CAMERA,
-                state=DeviceState.ON,
-                streamUrl="rtsp://192.168.1.100:554/stream1",
-                humanDetectionEnabled=True
-            )
-            await camera.save()
-            devices.append(camera)
-            print(f"✓ Created device: {camera.name} in {living_room.name}")
+    print(f"✓ Created 5 devices for admin1")
     
-    # Create devices for bedrooms
-    for bedroom in bedrooms:
-        device_counter += 1
-        # Bedside light
-        light = Device(
-            roomId=bedroom.id,
-            name="Bedside Lamp",
-            bssid=generate_bssid(device_counter),
-            controllerMAC=generate_mac(device_counter),
-            type=DeviceType.LIGHT,
-            state=DeviceState.ON
-        )
-        await light.save()
-        devices.append(light)
-        print(f"✓ Created device: {light.name} in {bedroom.name}")
-        
-        # Motion sensor (only for master bedroom)
-        if "Master" in bedroom.name:
-            device_counter += 1
-            sensor = Device(
-                roomId=bedroom.id,
-                name="Motion Sensor",
-                bssid=generate_bssid(device_counter),
-                controllerMAC=generate_mac(device_counter),
-                type=DeviceType.SENSOR,
-                state=DeviceState.ON
-            )
-            await sensor.save()
-            devices.append(sensor)
-            print(f"✓ Created device: {sensor.name} in {bedroom.name}")
+    # ==================== ADMIN2 DEVICES ====================
+    home2 = homes[1]
+    rooms2 = all_rooms[home2.id]
+    room2_living = rooms2[0]  # Phòng khách
+    room2_bedroom = rooms2[1]  # Phòng ngủ chính
     
-    # Create devices for kitchens
-    for kitchen in kitchens:
-        device_counter += 1
-        # Kitchen light
-        light = Device(
-            roomId=kitchen.id,
-            name="Kitchen Ceiling Light",
-            bssid=generate_bssid(device_counter),
-            controllerMAC=generate_mac(device_counter),
-            type=DeviceType.LIGHT,
-            state=DeviceState.OFF
-        )
-        await light.save()
-        devices.append(light)
-        print(f"✓ Created device: {light.name} in {kitchen.name}")
-        
-        # Range hood fan (only for first kitchen)
-        if kitchen == kitchens[0]:
-            device_counter += 1
-            hood_fan = Device(
-                roomId=kitchen.id,
-                name="Range Hood Fan",
-                bssid=generate_bssid(device_counter),
-                controllerMAC=generate_mac(device_counter),
-                type=DeviceType.FAN,
-                state=DeviceState.OFF,
-                speed=0
-            )
-            await hood_fan.save()
-            devices.append(hood_fan)
-            print(f"✓ Created device: {hood_fan.name} in {kitchen.name}")
+    # Phòng khách admin2
+    devices.extend([
+        await create_device(room2_living.id, "Living Room Fan", BSSID_ADMIN2, "FAN_K1L2",
+                           DeviceType.FAN, DeviceState.OFF, speed=0),
+        await create_device(room2_living.id, "Room Sensor", BSSID_ADMIN2, "SENSOR_M3N4",
+                           DeviceType.SENSOR, DeviceState.ON, temperature=28.0, humidity=55.0),
+    ])
+    
+    # Phòng ngủ admin2
+    devices.extend([
+        await create_device(room2_bedroom.id, "Main Light", BSSID_ADMIN2, "LIGHT_O5P6",
+                           DeviceType.LIGHT, DeviceState.ON),
+        await create_device(room2_bedroom.id, "IP Camera", BSSID_ADMIN2, "CAM_Q7R8",
+                           DeviceType.CAMERA, DeviceState.OFF,
+                           streamUrl="rtsp://192.168.1.101:554/stream2", humanDetectionEnabled=False),
+    ])
+    
+    print(f"✓ Created 4 devices for admin2")
+    
+    # ==================== ADMIN3 DEVICES ====================
+    home3 = homes[2]
+    rooms3 = all_rooms[home3.id]
+    room3_living = rooms3[0]  # Đại sảnh
+    room3_bedroom1 = rooms3[1]  # Phòng ngủ 1
+    room3_bedroom2 = rooms3[2]  # Phòng ngủ 2
+    room3_garden = rooms3[3]  # Sân vườn
+    
+    # Đại sảnh admin3
+    devices.extend([
+        await create_device(room3_living.id, "Ceiling Fan", BSSID_ADMIN3, "FAN_S9T0",
+                           DeviceType.FAN, DeviceState.ON, speed=3),
+        await create_device(room3_living.id, "Smart Light", BSSID_ADMIN3, "LIGHT_U1V2",
+                           DeviceType.LIGHT, DeviceState.ON),
+        await create_device(room3_living.id, "Climate Sensor", BSSID_ADMIN3, "SENSOR_W3X4",
+                           DeviceType.SENSOR, DeviceState.ON, temperature=26.0, humidity=65.0),
+    ])
+    
+    # Phòng ngủ 1 admin3
+    devices.extend([
+        await create_device(room3_bedroom1.id, "Bedroom 1 Fan", BSSID_ADMIN3, "FAN_Y5Z6",
+                           DeviceType.FAN, DeviceState.OFF, speed=0),
+    ])
+    
+    # Phòng ngủ 2 admin3
+    devices.extend([
+        await create_device(room3_bedroom2.id, "Bedroom 2 Light", BSSID_ADMIN3, "LIGHT_A7B8",
+                           DeviceType.LIGHT, DeviceState.OFF),
+    ])
+    
+    # Sân vườn admin3
+    devices.extend([
+        await create_device(room3_garden.id, "Garden Camera", BSSID_ADMIN3, "CAM_C9D0",
+                           DeviceType.CAMERA, DeviceState.ON,
+                           streamUrl="rtsp://192.168.1.102:554/stream3", humanDetectionEnabled=True),
+        await create_device(room3_garden.id, "Outdoor Sensor", BSSID_ADMIN3, "SENSOR_E1F2",
+                           DeviceType.SENSOR, DeviceState.ON, temperature=30.0, humidity=70.0),
+    ])
+    
+    print(f"✓ Created 7 devices for admin3")
+    
+    # ==================== UNASSIGNED DEVICES (cho demo Add Device) ====================
+    devices.extend([
+        await create_device(None, "New Smart Fan", BSSID_ADMIN1, "FAN_NEW1",
+                           DeviceType.FAN, DeviceState.OFF, speed=0),
+        await create_device(None, "New Sensor", BSSID_ADMIN2, "SENSOR_NEW2",
+                           DeviceType.SENSOR, DeviceState.ON, temperature=24.0, humidity=50.0),
+        await create_device(None, "New Camera", BSSID_ADMIN3, "CAM_NEW3",
+                           DeviceType.CAMERA, DeviceState.OFF, humanDetectionEnabled=False),
+    ])
+    
+    print(f"✓ Created 3 unassigned devices for demo")
     
     return devices
 
 
-async def create_sample_activity_logs(users, homes, devices):
-    """Create sample activity logs"""
-    print("Creating sample activity logs...")
+async def create_device(room_id, name, bssid, mac, device_type, state, **kwargs):
+    """Helper function to create a device"""
+    device_data = {
+        "roomId": room_id,
+        "name": name,
+        "bssid": bssid,
+        "controllerMAC": mac,
+        "type": device_type,
+        "state": state,
+    }
+    device_data.update(kwargs)
     
-    logs = [
-        # System initialization logs
+    device = Device(**device_data)
+    await device.save()
+    return device
+
+
+async def create_activity_logs(admins, homes):
+    """Create sample activity logs"""
+    print("Creating activity logs...")
+    
+    logs_data = [
         {
-            "userId": users[0].id,  # admin
-            "homeId": homes[0].id,  # admin home
-            "type": LogType.INFO,
-            "message": "Smart Home system initialized successfully"
-        },
-        {
-            "userId": users[0].id,
+            "userId": admins[0].id,
             "homeId": homes[0].id,
             "type": LogType.INFO,
-            "message": "All devices connected and online"
+            "message": "admin1 đã đăng nhập hệ thống"
         },
-        
-        # Device interaction logs
         {
-            "userId": users[0].id,
-            "homeId": homes[0].id,
-            "deviceId": next((d.id for d in devices if "Smart LED Light" in d.name), None),
+            "userId": admins[1].id,
+            "homeId": homes[1].id,
             "type": LogType.INFO,
-            "message": "Living room light turned on"
+            "message": "admin2 đã bật quạt phòng khách"
         },
         {
-            "userId": users[0].id,
-            "homeId": homes[0].id,
-            "deviceId": next((d.id for d in devices if "Smart Ceiling Fan" in d.name), None),
-            "type": LogType.INFO,
-            "message": "Living room fan speed set to level 2"
-        },
-        
-        # Security logs
-        {
-            "userId": users[0].id,
-            "homeId": homes[0].id,
-            "deviceId": next((d.id for d in devices if "Security Camera" in d.name), None),
+            "userId": admins[2].id,
+            "homeId": homes[2].id,
             "type": LogType.WARNING,
-            "message": "Motion detected in living room at 14:30"
+            "message": "Camera sân vườn phát hiện chuyển động"
         },
-        {
-            "userId": users[1].id,  # john_doe
-            "homeId": homes[1].id,  # john's home
-            "type": LogType.INFO,
-            "message": "User logged in successfully"
-        },
-        
-        # Error logs
-        {
-            "userId": users[0].id,
-            "homeId": homes[0].id,
-            "deviceId": next((d.id for d in devices if "Motion Sensor" in d.name), None),
-            "type": LogType.ERROR,
-            "message": "Motion sensor battery low (15% remaining)"
-        },
-        
-        # General activity logs
-        {
-            "userId": users[2].id,  # jane_smith
-            "homeId": homes[2].id,  # jane's home
-            "type": LogType.INFO,
-            "message": "New device added: Kitchen Ceiling Light"
-        },
-        {
-            "userId": users[3].id,  # bob_wilson
-            "homeId": homes[3].id,  # bob's home
-            "type": LogType.INFO,
-            "message": "Home automation schedule created"
-        }
     ]
     
-    for log_data in logs:
-        # Remove deviceId if None
-        if log_data.get("deviceId") is None:
-            log_data.pop("deviceId", None)
-            
+    for log_data in logs_data:
         log = ActivityLog(**log_data)
         await log.save()
     
-    print(f"✓ Created {len(logs)} activity logs")
+    print(f"✓ Created {len(logs_data)} activity logs")
 
 
 async def seed_data():
     """Main seeding function"""
-    print("Starting database seeding...")
+    print("\n" + "="*50)
+    print("🌱 STARTING DATABASE SEEDING")
+    print("="*50)
     
     # Initialize Beanie connection if not already initialized
     try:
@@ -400,10 +324,11 @@ async def seed_data():
                 ActivityLog
             ]
         )
+        
         # Check if data already exists
         existing_users = await User.find_all().to_list()
         if existing_users:
-            print("Database already contains data.")
+            print("\n⚠️  Database already contains data.")
             response = input("Do you want to clear existing data and reseed? (y/N): ")
             if response.lower() != 'y':
                 print("Seeding cancelled.")
@@ -412,34 +337,37 @@ async def seed_data():
             await clear_all_data()
         
         # Create sample data
-        admin_user, test_users = await create_sample_users()
-        all_users = [admin_user] + test_users
+        admins = await create_admin_users()
+        homes = await create_homes_for_admins(admins)
+        all_rooms = await create_rooms_for_homes(homes)
+        devices = await create_devices_for_rooms(homes, all_rooms)
+        await create_activity_logs(admins, homes)
         
-        admin_home, user_homes = await create_sample_homes(admin_user, test_users)
-        all_homes = [admin_home] + user_homes
+        # Count rooms
+        total_rooms = sum(len(rooms) for rooms in all_rooms.values())
         
-        rooms = await create_sample_rooms(admin_home, user_homes)
+        print("\n" + "="*50)
+        print("🎉 DATABASE SEEDING COMPLETED!")
+        print("="*50)
+        print(f"\n📊 Summary:")
+        print(f"   • Users: {len(admins)}")
+        print(f"   • Homes: {len(homes)}")
+        print(f"   • Rooms: {total_rooms}")
+        print(f"   • Devices: {len(devices)} (including 3 unassigned)")
+        print(f"   • Activity Logs: 3")
         
-        devices = await create_sample_devices(rooms)
+        print(f"\n🔐 Test Accounts (password = username):")
+        print(f"   • admin1 / admin1 - BSSID: {BSSID_ADMIN1}")
+        print(f"   • admin2 / admin2 - BSSID: {BSSID_ADMIN2}")
+        print(f"   • admin3 / admin3 - BSSID: {BSSID_ADMIN3}")
         
-        await create_sample_activity_logs(all_users, all_homes, devices)
-        
-        print("\n🎉 Database seeding completed successfully!")
-        print(f"📊 Summary:")
-        print(f"   • Users: {len(all_users)}")
-        print(f"   • Homes: {len(all_homes)}")
-        print(f"   • Rooms: {len(rooms)}")
-        print(f"   • Devices: {len(devices)}")
-        print(f"   • Activity Logs: 8")
-        
-        print(f"\n🔐 Test Accounts:")
-        print(f"   Admin: admin / admin123")
-        print(f"   User1: john_doe / john123")
-        print(f"   User2: jane_smith / jane123") 
-        print(f"   User3: bob_wilson / bob123")
+        print(f"\n📝 Notes:")
+        print(f"   • Mỗi admin có 1 home với BSSID riêng")
+        print(f"   • Unassigned devices: mỗi BSSID 1 cái cho demo Add Device")
+        print("="*50)
         
     except Exception as e:
-        print(f"Seeding failed: {e}")
+        print(f"❌ Seeding failed: {e}")
         raise
 
 

@@ -1,4 +1,4 @@
-from typing import List
+﻿from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.api import deps
 from app.api.utils import home_to_response
@@ -23,9 +23,7 @@ async def read_homes(
     homes = await HomeService.get_user_homes(current_user)
     return [home_to_response(home) for home in homes]
 
-# Path parameter: /api/v1/homes/694df4cb4a1a397bb61ac1b6
-# Query parameter: /api/v1/homes/?home_id=694df4cb4a1a397bb61ac1b6
-@router.get("/{home_id}", response_model=HomeResponse) # path param
+@router.get("/{home_id}", response_model=HomeResponse)
 async def read_home(
     home_id: str,
     current_user: User = Depends(deps.get_current_user)
@@ -36,7 +34,6 @@ async def read_home(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Home not found"
         )
-
     return home_to_response(home)
 
 @router.put("/{home_id}", response_model=HomeResponse)
