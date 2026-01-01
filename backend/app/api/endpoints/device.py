@@ -7,30 +7,11 @@ from app.models.device import Device
 from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceResponse, DeviceCommand, NewDeviceInLAN
 from app.services.device import DeviceService
 from app.services.camera import CameraStream
+from app.api.utils import device_to_response
 import asyncio
 import cv2
 
 router = APIRouter()
-
-# Helper function to convert Device model to DeviceResponse
-def device_to_response(device: Device) -> DeviceResponse:
-    return DeviceResponse(
-        id=str(device.id),
-        roomId=str(device.roomId) if device.roomId else None,
-        name=device.name,
-        custom_name=device.custom_name,
-        controllerMAC=device.controllerMAC,
-        bssid=device.bssid,
-        type=device.type,
-        state=device.state,
-        speed=device.speed,
-        streamUrl=device.streamUrl,
-        humanDetectionEnabled=device.humanDetectionEnabled,
-        temperature=device.temperature,
-        humidity=device.humidity,
-        createdAt=device.createdAt,
-        updatedAt=device.updatedAt
-    )
 
 # for testing
 @router.post("/", response_model=DeviceResponse)

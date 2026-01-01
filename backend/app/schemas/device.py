@@ -23,11 +23,12 @@ class DeviceUpdate(BaseModel):
     roomId: Optional[str] = None
 
 class DeviceCommand(BaseModel):
-    action: str  # ON, OFF, SET_SPEED
+    type: DeviceType
+    state: DeviceState
     speed: Optional[int] = None
-
-class HumanDetectionCommand(BaseModel):
-    enabled: bool
+    humanDetectionEnabled: Optional[bool] = None
+    temperature: Optional[float] = None
+    humidity: Optional[float] = None
 
 class DeviceResponse(BaseModel):
     id: str

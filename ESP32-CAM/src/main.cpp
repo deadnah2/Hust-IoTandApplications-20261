@@ -6,7 +6,7 @@
 #include "LedManager.h"
 #include "WebServerManager.h"
 
-// Default AP IP Address: 192.168.4.1
+// Default AP IP Address: 192.168.4.1  (:8080 để kết nối wifi)
 // Connect to WiFi "ESP32-CAM-Setup" and go to http://192.168.4.1 to configure.
 
 // Pin definition for CAMERA_MODEL_AI_THINKER

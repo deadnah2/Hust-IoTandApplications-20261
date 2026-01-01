@@ -1,6 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.api import deps
+from app.api.utils import room_to_response
 from app.models.user import User
 from app.schemas.room import RoomCreate, RoomUpdate, RoomResponse
 from app.services.room import RoomService
@@ -18,14 +19,7 @@ async def create_room(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to add rooms to this home"
         )
-    # Convert ids to string
-    return RoomResponse(
-        id=str(room.id),
-        name=room.name,
-        homeId=str(room.homeId),
-        createdAt=room.createdAt,
-        updatedAt=room.updatedAt
-    )
+    return room_to_response(room)
 
 @router.get("/", response_model=List[RoomResponse])
 async def read_rooms(
@@ -33,17 +27,7 @@ async def read_rooms(
     current_user: User = Depends(deps.get_current_user)
 ):
     rooms = await RoomService.get_rooms_by_home(homeId, current_user)
-    # Convert ids to string
-    return [
-        RoomResponse(
-            id=str(room.id),
-            name=room.name,
-            homeId=str(room.homeId),
-            createdAt=room.createdAt,
-            updatedAt=room.updatedAt
-        )
-        for room in rooms
-    ]
+    return [room_to_response(room) for room in rooms]
 
 @router.get("/{room_id}", response_model=RoomResponse)
 async def read_room(
@@ -56,13 +40,7 @@ async def read_room(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Room not found or you don't have permission"
         )
-    return RoomResponse(
-        id=str(room.id),
-        name=room.name,
-        homeId=str(room.homeId),
-        createdAt=room.createdAt,
-        updatedAt=room.updatedAt
-    )
+    return room_to_response(room)
 
 @router.put("/{room_id}", response_model=RoomResponse)
 async def update_room(
@@ -76,13 +54,7 @@ async def update_room(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Room not found or you don't have permission"
         )
-    return RoomResponse(
-        id=str(room.id),
-        name=room.name,
-        homeId=str(room.homeId),
-        createdAt=room.createdAt,
-        updatedAt=room.updatedAt
-    )
+    return room_to_response(room)
 
 @router.delete("/{room_id}", status_code=status.HTTP_200_OK)
 async def delete_room(

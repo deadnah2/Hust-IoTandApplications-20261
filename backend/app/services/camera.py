@@ -25,7 +25,7 @@ class CameraStream:
 
         self.processedFrame = None
         self.frameLock = threading.Lock()
-        self.model = YOLO('yolov11n.pt')
+        self.model = YOLO('yolo11n.pt')
 
 
     def start(self):
