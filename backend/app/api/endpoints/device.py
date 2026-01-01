@@ -15,26 +15,6 @@ import cv2
 router = APIRouter()
 DEVICE_OFFLINE_SECONDS = 7
 
-# Helper function to convert Device model to DeviceResponse
-def device_to_response(device: Device) -> DeviceResponse:
-    return DeviceResponse(
-        id=str(device.id),
-        roomId=str(device.roomId) if device.roomId else None,
-        name=device.name,
-        custom_name=device.custom_name,
-        controllerMAC=device.controllerMAC,
-        bssid=device.bssid,
-        type=device.type,
-        state=device.state,
-        speed=device.speed,
-        streamUrl=device.streamUrl,
-        humanDetectionEnabled=device.humanDetectionEnabled,
-        temperature=device.temperature,
-        humidity=device.humidity,
-        createdAt=device.createdAt,
-        updatedAt=device.updatedAt
-    )
-
 # for testing
 @router.post("/", response_model=DeviceResponse)
 async def create_device(
