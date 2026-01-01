@@ -4,6 +4,8 @@ from beanie.operators import In
 from beanie import PydanticObjectId
 from bson.errors import InvalidId
 from app.models.home import Home
+from app.models.room import Room
+from app.models.device import Device
 from app.models.user import User
 from app.schemas.home import HomeCreate, HomeUpdate
 
@@ -60,8 +62,21 @@ class HomeService:
             user.home_ids.remove(home.id)
             await user.save()
             
-            # Note: This doesn't delete rooms or devices within the home.
-            # A more robust implementation would handle that.
+            # Get all rooms in this home
+            rooms = await Room.find(Room.homeId == home.id).to_list()
+            room_ids = [room.id for room in rooms]
+            
+            # Unassign all devices in these rooms
+            if room_ids:
+                devices = await Device.find(In(Device.roomId, room_ids)).to_list()
+                for device in devices:
+                    await device.update({"$set": {"roomId": None, "updatedAt": datetime.utcnow()}})
+            
+            # Delete all rooms
+            for room in rooms:
+                await room.delete()
+            
+            # Delete the home
             await home.delete()
             return True
         return False

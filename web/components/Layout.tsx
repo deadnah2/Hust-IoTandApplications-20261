@@ -25,7 +25,8 @@ import {
   AccountCircle,
   ExpandLess,
   ExpandMore,
-  AddHome as AddHomeIcon
+  AddHome as AddHomeIcon,
+  Delete as DeleteIcon
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { House, Room } from "../types";
@@ -40,6 +41,8 @@ interface LayoutProps {
   onSelectRoom: (homeId: string, roomId: string) => void;
   onAddHome: () => void;
   onAddRoom: (homeId: string) => void;
+  onDeleteHome: (id: string) => void;
+  onDeleteRoom: (id: string) => void;
   children: React.ReactNode;
 }
 
@@ -52,6 +55,8 @@ export const Layout: React.FC<LayoutProps> = ({
   onSelectRoom,
   onAddHome,
   onAddRoom,
+  onDeleteHome,
+  onDeleteRoom,
   children
 }) => {
   const navigate = useNavigate();
@@ -152,6 +157,18 @@ export const Layout: React.FC<LayoutProps> = ({
                       fontSize: '0.75rem'
                     }}
                   />
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete "${house.name}" and all its rooms?`)) {
+                        onDeleteHome(house.id);
+                      }
+                    }}
+                    sx={{ opacity: 0.5, '&:hover': { opacity: 1, color: 'error.main' } }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
                   {isExpanded ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
                 
@@ -184,6 +201,18 @@ export const Layout: React.FC<LayoutProps> = ({
                               fontSize: '0.9rem'
                             }}
                           />
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Delete room "${room.name}"?`)) {
+                                onDeleteRoom(room.id);
+                              }
+                            }}
+                            sx={{ opacity: 0.5, '&:hover': { opacity: 1, color: 'error.main' } }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
                         </ListItemButton>
                       ))
                     )}

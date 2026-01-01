@@ -68,6 +68,15 @@ export const api = {
         return mockCall(newHouse);
       }
       return (await client.post("/homes", data)).data;
+    },
+    delete: async (id: string) => {
+      if (USE_MOCK) {
+        MockDB.houses = MockDB.houses.filter(h => h.id !== id);
+        MockDB.rooms = MockDB.rooms.filter(r => r.homeId !== id);
+        MockDB.addLog(`Home deleted: ${id}`, "WARNING");
+        return mockCall(true);
+      }
+      return (await client.delete(`/homes/${id}`)).data;
     }
   },
 

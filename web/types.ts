@@ -8,6 +8,7 @@ export interface House {
   id: string;
   name: string;
   location?: string;
+  bssid?: string;  // WiFi BSSID for device discovery
   ownerUserId?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -17,6 +18,7 @@ export interface Room {
   id: string;
   homeId: string;
   name: string;
+  bssid?: string;  // Override home's BSSID if room uses different WiFi
   createdAt?: string;
   updatedAt?: string;
 }
@@ -74,10 +76,12 @@ export const registerSchema = z.object({
 export const createHomeSchema = z.object({
   name: z.string().min(1, "Home name is required"),
   location: z.string().optional(),
+  bssid: z.string().min(1, "WiFi BSSID is required"),
 });
 
 export const createRoomSchema = z.object({
   name: z.string().min(1, "Room name is required"),
+  bssid: z.string().optional(),
 });
 
 export const createDeviceSchema = z.object({

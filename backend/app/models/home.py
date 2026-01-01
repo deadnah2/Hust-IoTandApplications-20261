@@ -8,6 +8,7 @@ class Home(Document):
     ownerUserId: Indexed(PydanticObjectId)
     name: str
     location: Optional[str] = None
+    bssid: Optional[str] = None  # WiFi BSSID for device discovery
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)
 

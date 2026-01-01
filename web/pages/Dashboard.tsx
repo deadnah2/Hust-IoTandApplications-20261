@@ -181,6 +181,24 @@ export const Dashboard = () => {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] })
     });
 
+    const deleteHomeMutation = useMutation({
+        mutationFn: api.homes.delete,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['houses'] });
+            queryClient.invalidateQueries({ queryKey: ['allRooms'] });
+            setSelectedHomeId(null);
+            setSelectedRoomId(null);
+        }
+    });
+
+    const deleteRoomMutation = useMutation({
+        mutationFn: api.rooms.delete,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['allRooms'] });
+            setSelectedRoomId(null);
+        }
+    });
+
     const addRoomMutation = useMutation({
         mutationFn: (data: { homeId: string; name: string }) => api.rooms.create(data),
         onSuccess: (newRoom) => {
@@ -232,6 +250,9 @@ export const Dashboard = () => {
 
     const handleOpenAddDevice = () => {
         resetAddDeviceDialog();
+        // Auto-fill BSSID from room or home
+        const effectiveBssid = selectedRoom?.bssid || selectedHome?.bssid || "";
+        setLanBssid(effectiveBssid);
         setAddDeviceOpen(true);
     };
 
@@ -257,6 +278,8 @@ export const Dashboard = () => {
     const handleSpeed = (id: string, speed: number) => speedMutation.mutate({ id, speed });
     const handleDetection = (id: string, enabled: boolean) => detectionMutation.mutate({ id, enabled });
     const handleDelete = (id: string) => deleteDeviceMutation.mutate(id);
+    const handleDeleteHome = (id: string) => deleteHomeMutation.mutate(id);
+    const handleDeleteRoom = (id: string) => deleteRoomMutation.mutate(id);
 
     const handleViewCamera = (id: string) => {
         setActiveCameraId(id);
@@ -284,6 +307,8 @@ export const Dashboard = () => {
                 onSelectRoom={handleSelectRoom}
                 onAddHome={() => { resetHome(); setAddHomeOpen(true); }}
                 onAddRoom={handleAddRoom}
+                onDeleteHome={handleDeleteHome}
+                onDeleteRoom={handleDeleteRoom}
             >
                 <Box className="flex flex-col items-center justify-center min-h-[60vh] text-center">
                     <Typography variant="h5" className="text-slate-600 mb-2">
@@ -322,6 +347,19 @@ export const Dashboard = () => {
                                 placeholder="e.g., Ha Noi, District 1..."
                                 {...regHome("location")} 
                             />
+                            <TextField 
+                                label="WiFi BSSID" 
+                                fullWidth 
+                                variant="outlined" 
+                                placeholder="e.g., E4:77:27:CE:78:AC"
+                                {...regHome("bssid")} 
+                                helperText={
+                                    <span>
+                                        BSSID dùng để tìm thiết bị trong mạng.<br/>
+                                        <strong>Cách lấy:</strong> Windows: "netsh wlan show interfaces" | Mac: Option+Click WiFi | Android: Settings → WiFi → Network details
+                                    </span>
+                                }
+                            />
                         </DialogContent>
                         <DialogActions>
                             <Button onClick={() => setAddHomeOpen(false)}>Cancel</Button>
@@ -345,6 +383,8 @@ export const Dashboard = () => {
             onSelectRoom={handleSelectRoom}
             onAddHome={() => { resetHome(); setAddHomeOpen(true); }}
             onAddRoom={handleAddRoom}
+            onDeleteHome={handleDeleteHome}
+            onDeleteRoom={handleDeleteRoom}
         >
             <div className="mb-6 flex justify-between items-center">
                 <div>
@@ -439,6 +479,19 @@ export const Dashboard = () => {
                             placeholder="e.g., Ha Noi, District 1..."
                             {...regHome("location")} 
                         />
+                        <TextField 
+                            label="WiFi BSSID" 
+                            fullWidth 
+                            variant="outlined" 
+                            placeholder="e.g., E4:77:27:CE:78:AC"
+                            {...regHome("bssid")} 
+                            helperText={
+                                <span>
+                                    BSSID dùng để tìm thiết bị trong mạng.<br/>
+                                    <strong>Cách lấy:</strong> Windows: "netsh wlan show interfaces" | Mac: Option+Click WiFi | Android: Settings → WiFi → Network details
+                                </span>
+                            }
+                        />
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setAddHomeOpen(false)}>Cancel</Button>
@@ -480,7 +533,7 @@ export const Dashboard = () => {
                         placeholder="AA:BB:CC:DD:EE:FF"
                         value={lanBssid}
                         onChange={(e) => setLanBssid(e.target.value)}
-                        helperText="Enter the BSSID of the WiFi the device is connected to."
+                        helperText={lanBssid ? "BSSID được lấy từ cài đặt Home/Room. Có thể thay đổi nếu cần." : "Nhập BSSID của WiFi mà thiết bị đang kết nối."}
                     />
                     <Button
                         variant="outlined"

@@ -44,6 +44,12 @@ async def get_database_status():
         client = AsyncIOMotorClient(settings.MONGODB_URL)
         db = client[settings.MONGO_DATABASE_NAME]
         
+        # Init Beanie để có thể dùng Model
+        await init_beanie(
+            database=db,
+            document_models=[User, Session, Home, Room, Device, ActivityLog]
+        )
+        
         # Count documents in each collection
         collections = {
             "Users": User,
@@ -60,8 +66,7 @@ async def get_database_status():
         
         total_documents = 0
         for collection_name, model in collections.items():
-            count = await model.find_all().to_list(length=0)  # Get count without loading data
-            document_count = len(count) if count else 0
+            document_count = await model.count()
             total_documents += document_count
             print(f"{collection_name:<15}: {document_count:>6} documents")
         
@@ -107,13 +112,13 @@ async def reset_database():
 
 
 async def run_migration():
-    """Run database migration"""
+    """Run database migration (MongoDB doesn't need schema migration, just create indexes)"""
     print("🚀 Running database migration...")
     
     try:
-        # Import migration function
-        from app.database.migrate import migrate
-        await migrate()
+        # MongoDB với Beanie không cần migration schema như SQL
+        # Chỉ cần tạo indexes nếu cần
+        print("✅ Migration completed (MongoDB auto-creates collections)")
         return True
     except Exception as e:
         print(f"❌ Migration failed: {e}")
@@ -125,7 +130,7 @@ async def run_seeding():
     print("🌱 Running database seeding...")
     
     try:
-        # Import seeding function
+        # Import seeding function from seed.py
         from app.database.seed import seed_data
         await seed_data()
         return True
