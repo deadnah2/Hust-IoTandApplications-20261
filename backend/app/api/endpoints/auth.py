@@ -10,6 +10,8 @@ from app.schemas.auth import (
 from app.api import deps
 from app.models.user import User
 from app.services.auth import AuthService
+from app.services.activity_log import ActivityLogService
+from app.services.home import HomeService
 
 router = APIRouter()
 
@@ -49,6 +51,17 @@ async def login(user_in: UserLogin):
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Ghi log đăng nhập vào TẤT CẢ homes của user
+    user_homes = await HomeService.get_user_homes(user)
+    for home in user_homes:
+        await ActivityLogService.create_log(
+            action="LOGIN",
+            message=f"User {user.username} logged in",
+            userId=str(user.id),
+            homeId=str(home.id)
+        )
+    
     access_token, refresh_token = await AuthService.create_tokens(user)
     return Token(
         access_token=access_token, 
@@ -72,11 +85,26 @@ async def refresh_token(request: RefreshTokenRequest):
 
 # gửi refresh token về server giúp duy trì nhiều phiên đăng nhập
 @router.post("/logout", status_code=status.HTTP_200_OK)
-async def logout(request: RefreshTokenRequest):
+async def logout(
+    request: RefreshTokenRequest,
+    current_user: User = Depends(deps.get_current_user)
+):
     """
     Logout user by deleting session.
     """
+    # Ghi log logout vào TẤT CẢ homes của user TRƯỚC KHI xóa session
+    user_homes = await HomeService.get_user_homes(current_user)
+    for home in user_homes:
+        await ActivityLogService.create_log(
+            action="LOGOUT",
+            message=f"User {current_user.username} logged out",
+            userId=str(current_user.id),
+            homeId=str(home.id)
+        )
+    
+    # Xóa session SAU KHI đã ghi log xong
     await AuthService.logout(request.refreshToken)
+    
     return {"message": "Logged out successfully"}
 
 # Lấy access token từ header ==> giải mã ra current_user ==> trả về chính đối tượng này
