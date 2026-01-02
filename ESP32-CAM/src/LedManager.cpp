@@ -23,3 +23,7 @@ void LedManager::toggle() {
     _state = !_state;
     digitalWrite(_pin, _state ? HIGH : LOW);
 }
+
+bool LedManager::getState() {
+    return _state;
+}

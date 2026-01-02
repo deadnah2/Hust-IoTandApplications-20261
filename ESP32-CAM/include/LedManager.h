@@ -8,6 +8,7 @@ public:
     void on();
     void off();
     void toggle();
+    bool getState();
 
 private:
     int _pin;

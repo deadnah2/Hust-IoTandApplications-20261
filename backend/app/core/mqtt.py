@@ -123,14 +123,21 @@ async def add_device(payload: str):
 async def update_device_data(device_id: str, payload: str):
     """
     Handle device/data/{id} message - update device sensor data
+    Ở đây, device_id là controllerMAC
     """
     from app.models.device import Device
 
     try:
         data = json.loads(payload)
+        
+        # Get device name from payload if available
+        device_name = data.get("name")
 
-        # Find device by controllerMAC (device_id in topic)
-        device = await Device.find_one(Device.controllerMAC == device_id)
+        # Find device by controllerMAC and optionally by name
+        if device_name:
+            device = await DeviceService.get_device_by_name_and_controller_mac(device_name, device_id)
+        else:
+            device = await Device.find_one(Device.controllerMAC == device_id)
 
         if device:
             from datetime import datetime
@@ -145,11 +152,11 @@ async def update_device_data(device_id: str, payload: str):
                 update_fields["temperature"] = data["temperature"]
             if "humidity" in data:
                 update_fields["humidity"] = data["humidity"]
-            if "status" in data:
-                status = str(data["status"]).strip().upper()
-                if status in ("ONLINE", "ON"):
+            if "state" in data:
+                state = str(data["state"]).strip().upper()
+                if state in ("ONLINE", "ON"):
                     update_fields["state"] = "ON"
-                elif status in ("OFFLINE", "OFF"):
+                elif state in ("OFFLINE", "OFF"):
                     update_fields["state"] = "OFF"
             if "speed" in data:
                 update_fields["speed"] = data["speed"]

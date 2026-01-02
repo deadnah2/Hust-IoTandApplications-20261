@@ -1,6 +1,11 @@
 #include "MqttManager.h"
 
-MqttManager::MqttManager(ConfigManager &mgr) : configManager(mgr), client(espClient) {}
+MqttManager* MqttManager::instance = nullptr;
+
+MqttManager::MqttManager(ConfigManager &mgr, LedManager &led) 
+    : configManager(mgr), ledManager(led), client(espClient) {
+    instance = this;
+}
 
 void MqttManager::begin() {
     AppConfig config = configManager.loadConfig();
@@ -11,15 +16,56 @@ void MqttManager::begin() {
     }
 }
 
-void MqttManager::callback(char* topic, byte* payload, unsigned int length) {
+void MqttManager::callback(char* topic, byte* payload, unsigned int length) { // hàm được định nghĩa từ trước
+    if (instance != nullptr) {
+        instance->handleMqttMessage(topic, payload, length);
+    }
+}
+
+void MqttManager::handleMqttMessage(char* topic, byte* payload, unsigned int length) {
     Serial.print("Message arrived [");
     Serial.print(topic);
     Serial.print("] ");
-    for (unsigned int i = 0; i < length; i++) {
-        Serial.print((char)payload[i]);
+    
+    // Print raw payload
+    char rawPayload[256] = {0};
+    memcpy(rawPayload, payload, min(length, 255u));
+    Serial.println(rawPayload);
+
+    // Parse JSON
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, payload, length);
+
+    if (error) {
+        Serial.print("JSON parse error: ");
+        Serial.println(error.c_str());
+        return;
     }
-    Serial.println();
-    // Handle control messages here if needed
+
+    // Debug: Print JSON keys
+    const char* action = doc["action"] | "";
+    Serial.print("DEBUG - Parsed action: '");
+    Serial.print(action);
+    Serial.print("' (length: ");
+    Serial.print(strlen(action));
+    Serial.println(")");
+
+    // Xử lý lệnh LED
+    if (strcmp(action, "LIGHT_ON") == 0) {
+        ledManager.on();
+        // publishLedState();
+        Serial.println("✅ LED ON");
+
+    } else if (strcmp(action, "LIGHT_OFF") == 0) {
+        ledManager.off();
+        // publishLedState();
+        Serial.println("✅ LED OFF");
+
+    } else {
+        Serial.print("❌ Unknown action: '");
+        Serial.print(action);
+        Serial.println("'");
+    }
 }
 
 void MqttManager::reconnect() {
@@ -51,9 +97,11 @@ void MqttManager::reconnect() {
             Serial.println("Subscribed to: " + controlTopic);
 
             // Publish device/new for Camera
-            publishDeviceNew("High quality camera", "CAMERA", WiFi.BSSIDstr(), deviceMac, "ONLINE");
+            String streamUrl = "http://" + WiFi.localIP().toString() + "/stream";
+            publishDeviceNew("High quality camera", "CAMERA", WiFi.BSSIDstr(), deviceMac, "ONLINE", streamUrl);
             // Publish device/new for Light (Flash)
-            publishDeviceNew("Super bright light", "LIGHT", WiFi.BSSIDstr(), deviceMac, "ONLINE");
+            String ledState = ledManager.getState() ? "ON" : "OFF";
+            publishDeviceNew("Super bright light", "LIGHT", WiFi.BSSIDstr(), deviceMac, ledState);
 
         } else {
             Serial.print("failed, rc=");
@@ -82,13 +130,17 @@ bool MqttManager::isConnected() {
     return client.connected();
 }
 
-void MqttManager::publishDeviceNew(String name, String type, String bssid, String mac, String state) {
+void MqttManager::publishDeviceNew(String name, String type, String bssid, String mac, String state, String streamUrl) {
     StaticJsonDocument<200> doc;
     doc["name"] = name;
     doc["type"] = type;
     doc["bssid"] = bssid;
     doc["controllerMAC"] = mac;
     doc["state"] = state;
+    if (streamUrl.length() > 0) {
+        doc["streamUrl"] = streamUrl;
+    }
+
 
     char buffer[256];
     serializeJson(doc, buffer);
@@ -101,4 +153,34 @@ void MqttManager::publishDeviceNew(String name, String type, String bssid, Strin
 void MqttManager::publishData(String mac, String dataJson) {
     String topic = "device/data/" + mac;
     client.publish(topic.c_str(), dataJson.c_str());
+}
+
+void MqttManager::publishDeviceStateForLight() {
+    StaticJsonDocument<256> doc;
+    doc["name"] = "Super bright light";
+    doc["state"] = ledManager.getState() ? "ON" : "OFF";
+
+    char buffer[300];
+    serializeJson(doc, buffer);
+
+    String topic = "device/data/" + deviceMac;
+    client.publish(topic.c_str(), buffer);
+
+    Serial.print("Light state published: ");
+    Serial.println(buffer);
+}
+
+void MqttManager::publishDeviceStateForCamera() {
+    StaticJsonDocument<256> doc;
+    doc["name"] = "High quality camera";
+    doc["state"] = "ON";
+
+    char buffer[300];
+    serializeJson(doc, buffer);
+
+    String topic = "device/data/" + deviceMac;
+    client.publish(topic.c_str(), buffer);
+
+    Serial.print("Camera state published: ");
+    Serial.println(buffer);
 }

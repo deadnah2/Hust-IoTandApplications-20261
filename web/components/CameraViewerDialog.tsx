@@ -77,7 +77,7 @@ export const CameraViewerDialog: React.FC<CameraViewerDialogProps> = ({
         <Box className="flex-1 flex flex-col bg-black relative">
           <Box className="flex-1 relative overflow-hidden flex items-center justify-center">
             <img
-              src={`https://picsum.photos/1280/720?random=${activeCamera.id}`}
+              src={`http://localhost:8000/api/v1/devices/camera-stream?device_id=${activeCamera.id}`}
               alt="Live"
               className="w-full h-full object-contain opacity-90"
             />

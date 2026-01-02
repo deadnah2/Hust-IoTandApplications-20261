@@ -1,14 +1,39 @@
 import sys
 import os
+import logging
+from datetime import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
 from app.core.lifespan import lifespan
 from app.api.api import api_router
+
+# Cấu hình logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
+
+# Middleware để log mỗi request
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Log thông tin request
+        logger.info(f"📨 {request.method} {request.url.path}")
+        
+        response = await call_next(request)
+        
+        # Log thông tin response
+        logger.info(f"✅ {request.method} {request.url.path} - Status: {response.status_code}")
+        
+        return response
 
 # Khởi tạo FastAPI app
 app = FastAPI(
@@ -17,6 +42,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Thêm logging middleware
+app.add_middleware(LoggingMiddleware)
 
 # Cấu hình CORS
 if settings.CORS_ORIGINS:

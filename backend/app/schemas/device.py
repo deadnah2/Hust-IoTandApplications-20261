@@ -38,6 +38,7 @@ class DeviceResponse(BaseModel):
     state: DeviceState
     speed: Optional[int] = None
     humanDetectionEnabled: Optional[bool] = None
+    streamUrl: Optional[str] = None
     temperature: Optional[float] = None
     humidity: Optional[float] = None
     lastSeen: Optional[datetime] = None

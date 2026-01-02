@@ -35,7 +35,7 @@ async def register(user_in: UserRegister):
         )
 
 
-@router.post("/authenticate", response_model=Token)
+@router.post("/login", response_model=Token)
 async def login(user_in: UserLogin):
     """
     Authenticate user and return tokens.

@@ -32,8 +32,8 @@
 
 ConfigManager configManager;
 WifiManager wifiManager(configManager);
-MqttManager mqttManager(configManager);
 LedManager ledManager(WHITE_LED_PIN);
+MqttManager mqttManager(configManager, ledManager);
 WebServerManager webServerManager;
 
 unsigned long lastMsg = 0;
@@ -120,16 +120,12 @@ void loop() {
         digitalWrite(RED_LED_PIN, HIGH); // Tắt đèn đỏ (Pin 33) khi đã kết nối (HIGH là tắt)
         mqttManager.loop();
 
-        // Example: Publish data every 10 seconds
+        // Publish device state every 10 seconds
         unsigned long now = millis();
         if (now - lastMsg > 10000) {
             lastMsg = now;
-            
-            // Create a dummy data packet
-            String mac = wifiManager.getMacAddress();
-            String data = "{\"uptime\":" + String(millis()) + ", \"rssi\":" + String(WiFi.RSSI()) + "}";
-            
-            mqttManager.publishData(mac, data);
+            mqttManager.publishDeviceStateForLight();
+            mqttManager.publishDeviceStateForCamera();
         }
     } else {
         // Blink LED when not connected

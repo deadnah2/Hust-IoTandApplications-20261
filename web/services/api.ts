@@ -38,7 +38,7 @@ export const api = {
         }
         throw new Error("Invalid credentials (try admin/admin)");
       }
-      const data = (await client.post("/authenticate", creds)).data;
+      const data = (await client.post("/login", creds)).data;
       return {
         id_token: data.access_token,
         refresh_token: data.refresh_token,
@@ -157,10 +157,17 @@ export const api = {
        }
        return (await client.delete(`/devices/${id}`)).data;
     },
-    control: async (id: string, command: { action: "ON" | "OFF" | "SET_SPEED", speed?: number }) => {
+    control: async (id: string, command: { action: string, speed?: number }) => {
       if (USE_MOCK || USE_MOCK_DEVICES) {
         const dev = MockDB.devices.find(d => d.id === id);
         if (dev) {
+          // Handle light-specific actions
+          if (command.action === "LIGHT_ON") dev.state = "ON";
+          if (command.action === "LIGHT_OFF") dev.state = "OFF";
+          // Handle camera-specific actions
+          if (command.action === "CAMERA_ON") dev.state = "ON";
+          if (command.action === "CAMERA_OFF") dev.state = "OFF";
+          // Handle generic actions
           if (command.action === "ON") dev.state = "ON";
           if (command.action === "OFF") dev.state = "OFF";
           if (command.action === "SET_SPEED" && typeof command.speed === "number") {

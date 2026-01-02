@@ -143,7 +143,7 @@ export const Dashboard = () => {
         queryKey: ['devices', selectedRoomId],
         queryFn: () => selectedRoomId ? api.devices.list(selectedRoomId) : Promise.resolve([]),
         enabled: !!selectedRoomId,
-        refetchInterval: 2000,
+        refetchInterval: 2000000,
         refetchIntervalInBackground: true
     });
 
@@ -159,8 +159,18 @@ export const Dashboard = () => {
     });
 
     const toggleMutation = useMutation({
-        mutationFn: (vars: { id: string, state: boolean }) =>
-            api.devices.control(vars.id, { action: vars.state ? "ON" : "OFF" }),
+        mutationFn: (vars: { id: string, state: boolean, deviceType?: string }) => {
+            // Xác định action dựa trên device type
+            let action = "ON";
+            if (vars.deviceType === "LIGHT") {
+                action = vars.state ? "LIGHT_ON" : "LIGHT_OFF";
+            } else if (vars.deviceType === "CAMERA") {
+                action = vars.state ? "CAMERA_ON" : "CAMERA_OFF";
+            } else {
+                action = vars.state ? "ON" : "OFF";
+            }
+            return api.devices.control(vars.id, { action: action as any });
+        },
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] })
     });
 
@@ -274,7 +284,10 @@ export const Dashboard = () => {
         assignDeviceMutation.mutate({ deviceId: selectedLanDeviceId, roomId: selectedRoomId });
     };
 
-    const handleToggle = (id: string, state: boolean) => toggleMutation.mutate({ id, state });
+    const handleToggle = (id: string, state: boolean) => {
+        const device = devices.find(d => d.id === id);
+        toggleMutation.mutate({ id, state, deviceType: device?.type });
+    };
     const handleSpeed = (id: string, speed: number) => speedMutation.mutate({ id, speed });
     const handleDetection = (id: string, enabled: boolean) => detectionMutation.mutate({ id, enabled });
     const handleDelete = (id: string) => deleteDeviceMutation.mutate(id);

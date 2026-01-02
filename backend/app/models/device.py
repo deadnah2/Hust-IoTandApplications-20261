@@ -24,6 +24,7 @@ class Device(Document):
     state: str = Field(default=DeviceState.OFF)  # Store as string
     speed: Optional[int] = 0 # For FAN: 0..3
     humanDetectionEnabled: Optional[bool] = False
+    streamUrl: Optional[str] = None
     temperature: Optional[float] = None  # For SENSOR: °C
     humidity: Optional[float] = None  # For SENSOR: %
     lastSeen: Optional[datetime] = None
