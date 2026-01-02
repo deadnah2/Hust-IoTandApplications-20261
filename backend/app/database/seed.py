@@ -159,7 +159,7 @@ async def create_devices_for_rooms(homes, all_rooms):
                            DeviceType.SENSOR, DeviceState.ON, temperature=25.5, humidity=60.0),
         await create_device(room1_living.id, "Security Camera", BSSID_ADMIN1, "CAM_E5F6",
                            DeviceType.CAMERA, DeviceState.ON, 
-                           streamUrl="rtsp://192.168.1.100:554/stream1", humanDetectionEnabled=True),
+                           streamUrl=None, humanDetectionEnabled=True),
     ])
     
     # Phòng ngủ admin1
@@ -192,7 +192,7 @@ async def create_devices_for_rooms(homes, all_rooms):
                            DeviceType.LIGHT, DeviceState.ON),
         await create_device(room2_bedroom.id, "IP Camera", BSSID_ADMIN2, "CAM_Q7R8",
                            DeviceType.CAMERA, DeviceState.OFF,
-                           streamUrl="rtsp://192.168.1.101:554/stream2", humanDetectionEnabled=False),
+                           streamUrl=None, humanDetectionEnabled=False),
     ])
     
     print(f"✓ Created 4 devices for admin2")
@@ -231,7 +231,7 @@ async def create_devices_for_rooms(homes, all_rooms):
     devices.extend([
         await create_device(room3_garden.id, "Garden Camera", BSSID_ADMIN3, "CAM_C9D0",
                            DeviceType.CAMERA, DeviceState.ON,
-                           streamUrl="rtsp://192.168.1.102:554/stream3", humanDetectionEnabled=True),
+                           streamUrl=None, humanDetectionEnabled=True),
         await create_device(room3_garden.id, "Outdoor Sensor", BSSID_ADMIN3, "SENSOR_E1F2",
                            DeviceType.SENSOR, DeviceState.ON, temperature=30.0, humidity=70.0),
     ])
@@ -279,18 +279,21 @@ async def create_activity_logs(admins, homes):
             "userId": admins[0].id,
             "homeId": homes[0].id,
             "type": LogType.INFO,
+            "action": "LOGIN",
             "message": "admin1 đã đăng nhập hệ thống"
         },
         {
             "userId": admins[1].id,
             "homeId": homes[1].id,
             "type": LogType.INFO,
+            "action": "DEVICE_CONTROL",
             "message": "admin2 đã bật quạt phòng khách"
         },
         {
             "userId": admins[2].id,
             "homeId": homes[2].id,
             "type": LogType.WARNING,
+            "action": "CAMERA_DETECTION",
             "message": "Camera sân vườn phát hiện chuyển động"
         },
     ]

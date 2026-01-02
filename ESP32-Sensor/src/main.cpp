@@ -23,7 +23,7 @@ const char* WIFI_PASS = "";
 
 // MQTT (ngrok)
 const char* MQTT_BROKER = "0.tcp.ap.ngrok.io";
-const int MQTT_PORT = 14362;
+const int MQTT_PORT = 14752;
 
 // BSSID for device discovery
 const char* WIFI_BSSID = "e4:77:27:ce:78:ac";

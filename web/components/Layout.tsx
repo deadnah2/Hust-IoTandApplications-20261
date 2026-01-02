@@ -31,6 +31,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { House, Room } from "../types";
 import { USE_MOCK, ROUTES } from "../constants";
+import { api } from "../services/api";
 
 interface LayoutProps {
   houses: House[];
@@ -72,9 +73,16 @@ export const Layout: React.FC<LayoutProps> = ({
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("id_token");
-    navigate(ROUTES.LOGIN);
+  const handleLogout = async () => {
+    try {
+      await api.auth.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      localStorage.removeItem("id_token");
+      localStorage.removeItem("refresh_token");
+      navigate(ROUTES.LOGIN);
+    }
   };
 
   const handleHomeClick = (homeId: string) => {
