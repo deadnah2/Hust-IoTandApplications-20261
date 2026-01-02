@@ -1,20 +1,18 @@
-from beanie import Document, PydanticObjectId, Indexed
+from beanie import Document, PydanticObjectId
 from typing import Optional
 from datetime import datetime
-from enum import Enum
 from pydantic import Field
 
-class LogType(str, Enum):
+class LogType:
     INFO = "INFO"
     WARNING = "WARNING"
     ERROR = "ERROR"
 
 class ActivityLog(Document):
-    userId: Optional[PydanticObjectId] = None
     homeId: Optional[PydanticObjectId] = None
-    roomId: Optional[Indexed(PydanticObjectId)] = None
-    deviceId: Optional[Indexed(PydanticObjectId)] = None
-    type: str
+    userId: Optional[PydanticObjectId] = None
+    type: str = Field(default=LogType.INFO)
+    action: str  # "LOGIN", "CREATE_HOME", "DELETE_HOME", "CREATE_ROOM", etc.
     message: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
