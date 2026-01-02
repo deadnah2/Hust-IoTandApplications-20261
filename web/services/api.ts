@@ -45,6 +45,13 @@ export const api = {
         user: data.user,
       };
     },
+    logout: async () => {
+      if (USE_MOCK) return;
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (refreshToken) {
+        await client.post("/logout", { refreshToken });
+      }
+    },
     register: async (data: { username: string; email?: string; password: string }) => {
       if (USE_MOCK) return mockCall({});
       return (await client.post("/register", data)).data;
@@ -132,7 +139,7 @@ export const api = {
           ...data, 
           id: Math.random().toString(), 
           state: "ON", 
-          speed: 0 
+          speed: 1 
         } as Device;
         
         if (data.type === "SENSOR") {
@@ -186,6 +193,17 @@ export const api = {
       // BE chưa có endpoint riêng cho human detection, dùng update
       return (await client.put(`/devices/${id}`, { humanDetectionEnabled: enabled })).data;
     },
+    setThreshold: async (id: string, temperatureThreshold: number | null) => {
+      if (USE_MOCK || USE_MOCK_DEVICES) {
+         const dev = MockDB.devices.find(d => d.id === id);
+         if (dev && dev.type === "SENSOR") {
+            (dev as any).temperatureThreshold = temperatureThreshold;
+            MockDB.addLog(`Sensor ${dev.name} temperature threshold set: ${temperatureThreshold}°C`);
+         }
+         return mockCall(dev);
+      }
+      return (await client.put(`/devices/${id}`, { temperatureThreshold })).data;
+    },
     // Helper để lấy URL stream camera (dùng cho <img> tag)
     getCameraStreamUrl: (deviceId: string): string => {
       const token = localStorage.getItem("id_token");
@@ -194,9 +212,9 @@ export const api = {
   },
 
   logs: {
-     list: async (): Promise<ActivityLog[]> => {
+     list: async (homeId: string): Promise<ActivityLog[]> => {
         if(USE_MOCK || USE_MOCK_DEVICES) return mockCall(MockDB.logs);
-        return []; // Logs usually websocket or specific endpoint
+        return (await client.get(`/activity-logs?homeId=${homeId}`)).data;
      }
   }
 };
