@@ -21,6 +21,7 @@ class DeviceCreate(BaseModel):
 class DeviceUpdate(BaseModel):
     custom_name: Optional[str] = None
     roomId: Optional[str] = None
+    temperatureThreshold: Optional[float] = None  # Ngưỡng cảnh báo nhiệt độ
 
 class DeviceCommand(BaseModel):
     action: str  # "ON", "OFF", "SET_SPEED"
@@ -42,6 +43,8 @@ class DeviceResponse(BaseModel):
     # Sensor data
     temperature: Optional[float] = None
     humidity: Optional[float] = None
+    temperatureThreshold: Optional[float] = None
+    temperatureAlert: Optional[bool] = False  # True nếu vượt ngưỡng
     lastSeen: Optional[datetime] = None
     isOnline: Optional[bool] = None
     createdAt: datetime

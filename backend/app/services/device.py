@@ -110,7 +110,7 @@ class DeviceService:
             
             publish_command(device.controllerMAC, mqtt_command)
             
-            # Update device state in database
+            # Update DB ngay để UI mượt (log sẽ được ghi trong device_to_response khi FE poll)
             update_data = {"updatedAt": datetime.utcnow()}
             if command.action == "ON":
                 update_data["state"] = "ON"

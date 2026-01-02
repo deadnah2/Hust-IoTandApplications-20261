@@ -22,11 +22,12 @@ class Device(Document):
     bssid: str
     type: str = Field(default=DeviceType.LIGHT)  # Store as string
     state: str = Field(default=DeviceState.OFF)  # Store as string
-    speed: Optional[int] = 0 # For FAN: 0..3
+    speed: Optional[int] = 1 # For FAN: 1..3
     streamUrl: Optional[str] = None # For CAMERA
     humanDetectionEnabled: Optional[bool] = False
     temperature: Optional[float] = None  # For SENSOR: °C
     humidity: Optional[float] = None  # For SENSOR: %
+    temperatureThreshold: Optional[float] = None  # Ngưỡng cảnh báo nhiệt độ (°C)
     lastSeen: Optional[datetime] = None
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)
