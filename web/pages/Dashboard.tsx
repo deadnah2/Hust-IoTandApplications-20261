@@ -103,6 +103,9 @@ export const Dashboard = () => {
         open: false, message: "", severity: "warning"
     });
     const alertedDevicesRef = useRef<Set<string>>(new Set());
+    
+    // Track pending mutations to pause polling during device updates
+    const [isPendingMutation, setIsPendingMutation] = useState(false);
 
     const resetAddDeviceDialog = () => {
         setLanBssid("");
@@ -155,8 +158,9 @@ export const Dashboard = () => {
         queryKey: ['devices', selectedRoomId],
         queryFn: () => selectedRoomId ? api.devices.list(selectedRoomId) : Promise.resolve([]),
         enabled: !!selectedRoomId,
-        refetchInterval: 2000,
-        refetchIntervalInBackground: true
+        // Pause polling during mutations to prevent race conditions (button flickering)
+        refetchInterval: isPendingMutation ? false : 2000,
+        refetchIntervalInBackground: !isPendingMutation
     });
 
     // Check for alerts and show snackbar
@@ -192,7 +196,7 @@ export const Dashboard = () => {
     });
 
     const toggleMutation = useMutation({
-        mutationFn: (vars: { id: string, state: boolean, deviceType?: string }) => {
+        mutationFn: async (vars: { id: string, state: boolean, deviceType?: string }) => {
             // Xác định action dựa trên device type
             let action = "ON";
             if (vars.deviceType === "LIGHT") {
@@ -205,6 +209,9 @@ export const Dashboard = () => {
             return api.devices.control(vars.id, { action: action as any });
         },
         onMutate: async (vars) => {
+            // Mark mutation as pending to pause polling
+            setIsPendingMutation(true);
+            
             // Cancel outgoing refetches
             await queryClient.cancelQueries({ queryKey: ['devices', selectedRoomId] });
             
@@ -229,9 +236,15 @@ export const Dashboard = () => {
                 queryClient.setQueryData(['devices', selectedRoomId], context.previousDevices);
             }
         },
-        onSettled: () => {
-            // Refetch to sync with server state
-            queryClient.invalidateQueries({ queryKey: ['devices'] });
+        onSettled: async () => {
+            // Wait a bit for server to fully process the command
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Refetch to sync with server state - only for current room
+            await queryClient.invalidateQueries({ queryKey: ['devices', selectedRoomId] });
+            
+            // Resume polling
+            setIsPendingMutation(false);
         }
     });
 
