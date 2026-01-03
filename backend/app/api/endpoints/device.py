@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 DEVICE_OFFLINE_SECONDS = 7
 
+# Global dict để lưu các camera stream đang chạy
+active_camera_streams = {}
+
 # GET specific endpoints BEFORE generic ones
 @router.get("/lan", response_model=List[DeviceResponse])
 async def get_new_devices_in_lan(
@@ -74,9 +77,16 @@ async def camera_stream(
             detail="Device not found or no stream URL"
         )
 
-    # Khởi tạo CameraStream với detection bật
-    stream = CameraStream(device.streamUrl, humanDetectionMode=False)
+    # Khởi tạo CameraStream với deviceId
+    stream = CameraStream(
+        device.streamUrl, 
+        deviceId=device_id,
+        humanDetectionMode=device.humanDetectionEnabled or False
+    )
     stream.start()
+    
+    # Lưu stream vào dict
+    active_camera_streams[device_id] = stream
 
     async def generate():
         try:
@@ -95,7 +105,7 @@ async def camera_stream(
                         except Exception as e:
                             logger.error(f"Stream error: {e}")
                             break
-                await asyncio.sleep(0.05)  # ~30fps
+                await asyncio.sleep(0.04)  
         except asyncio.CancelledError:
             # Request bị cancel (client disconnect)
             logger.info(f"Stream cancelled for device: {device_id}")
@@ -103,6 +113,9 @@ async def camera_stream(
             logger.error(f"Unexpected error in stream: {e}")
         finally:
             stream.stop()
+            # Xóa stream khỏi dict
+            if device_id in active_camera_streams:
+                del active_camera_streams[device_id]
             logger.info(f"✅ Camera stream stopped and cleaned up for device: {device_id}")
 
     return StreamingResponse(generate(), media_type='multipart/x-mixed-replace; boundary=frame')

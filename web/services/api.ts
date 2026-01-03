@@ -197,8 +197,11 @@ export const api = {
          }
          return mockCall(dev);
       }
-      // BE chưa có endpoint riêng cho human detection, dùng update
-      return (await client.put(`/devices/${id}`, { humanDetectionEnabled: enabled })).data;
+      // Gửi command CAMERA_MODE để cập nhật detection mode
+      return (await client.post(`/devices/${id}/command`, { 
+        action: "CAMERA_MODE", 
+        humanDetectionEnabled: enabled 
+      })).data;
     },
     setThreshold: async (id: string, temperatureThreshold: number | null) => {
       if (USE_MOCK || USE_MOCK_DEVICES) {

@@ -6,15 +6,17 @@ from ultralytics import YOLO
 
 
 class CameraStream:
-    def __init__(self, cameraUrl, frameQueueSize=4, humanDetectionMode=False):
+    def __init__(self, cameraUrl, deviceId, frameQueueSize=4, humanDetectionMode=False):
         """
         Khởi tạo CameraStream.
 
         :param cameraUrl: URL của camera stream (ví dụ: http://192.168.1.100:80/stream)
+        :param deviceId: ID của device trong database
         :param frameQueueSize: Kích thước tối đa của queue lưu frame (mặc định 4)
         :param humanDetectionMode: Bật/tắt chế độ phát hiện người (mặc định False)
         """
         self.cameraUrl = cameraUrl
+        self.deviceId = deviceId
         self.frameQueue = queue.Queue(maxsize=frameQueueSize)
         self.humanDetectionMode = humanDetectionMode
 
@@ -25,6 +27,7 @@ class CameraStream:
 
         self.processedFrame = None
         self.frameLock = threading.Lock()
+        self.modeLock = threading.Lock()  # Mutex cho humanDetectionMode
         self.model = YOLO('yolo11n.pt')
 
 
@@ -59,6 +62,13 @@ class CameraStream:
         with self.frameLock:  # Đồng bộ truy cập
             return self.processedFrame.copy() if self.processedFrame is not None else None
 
+    def set_detection_mode(self, enabled: bool):
+        """Cập nhật humanDetectionMode từ bên ngoài."""
+        with self.modeLock:
+            if self.humanDetectionMode != enabled:
+                self.humanDetectionMode = enabled
+                print(f"🔄 Detection mode updated: {enabled}")
+
     def _capture_frames(self):
         """Luồng lấy frame từ cameraUrl và put vào queue."""
         cap = cv2.VideoCapture(self.cameraUrl)
@@ -85,21 +95,27 @@ class CameraStream:
                         pass
             else:
                 print("⚠️ Failed to capture frame")
-                time.sleep(0.05)
+                time.sleep(0.04)
 
         cap.release()
         print("🛑 Camera capture thread stopped")
 
     def _detect_humans(self):
         """Luồng thực hiện detection trên frame từ queue."""
-        print(f"✅ Detection thread started (mode: {self.humanDetectionMode})")
+        with self.modeLock:
+            initial_mode = self.humanDetectionMode
+        print(f"✅ Detection thread started (mode: {initial_mode})")
         while self.running:
             try:
                 frame = self.frameQueue.get(timeout=1)
                 start_detect = time.time()
                 processed_frame = frame.copy()
 
-                if self.humanDetectionMode and self.model:
+                # Đọc humanDetectionMode với mutex
+                with self.modeLock:
+                    detection_enabled = self.humanDetectionMode
+
+                if detection_enabled and self.model:
                     results = self.model(processed_frame, classes=[0])
                     human_detected = False
                     for result in results:
@@ -112,7 +128,7 @@ class CameraStream:
                     if human_detected:
                         print("🚨 Human detected!")
                 else:
-                    time.sleep(0.03)
+                    time.sleep(0.02)
 
                 detect_time = time.time() - start_detect
                 print(f"Detected frame at {time.strftime('%H:%M:%S', time.localtime())}, took {detect_time:.4f} seconds")

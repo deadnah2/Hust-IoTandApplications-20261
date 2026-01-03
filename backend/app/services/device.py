@@ -98,7 +98,22 @@ class DeviceService:
         if not device:
             return False
 
-        # Publish command to MQTT topic for the device
+        # Xử lý CAMERA_MODE riêng - chỉ update DB và cập nhật stream, không publish MQTT
+        if command.action == "CAMERA_MODE":
+            update_data = {
+                "humanDetectionEnabled": command.humanDetectionEnabled,
+                "updatedAt": datetime.utcnow()
+            }
+            await device.update({"$set": update_data})
+            
+            # Cập nhật detection mode cho stream đang chạy (nếu có)
+            from app.api.endpoints.device import active_camera_streams
+            if device_id in active_camera_streams:
+                active_camera_streams[device_id].set_detection_mode(command.humanDetectionEnabled)
+            
+            return True
+
+        # Publish command to MQTT topic for the device (cho các lệnh khác)
         from app.core.mqtt import publish_command
         
         if device.controllerMAC:
