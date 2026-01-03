@@ -108,7 +108,7 @@ class CameraStream:
                     pass
             else:
                 print("⚠️ Failed to capture frame")
-                time.sleep(0.05)
+                time.sleep(0.03)
 
         cap.release()
         print("🛑 Camera capture thread stopped")

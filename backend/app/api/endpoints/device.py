@@ -112,7 +112,8 @@ async def camera_stream(
             while stream.running:
                 frame = stream.get_processed_frame()
                 if frame is not None:
-                    ret, buffer = cv2.imencode('.jpg', frame)
+                    # JPEG quality 70 để giảm kích thước, tăng tốc độ encode
+                    ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
                     if ret:
                         try:
                             yield (b'--frame\r\n'
@@ -124,7 +125,8 @@ async def camera_stream(
                         except Exception as e:
                             logger.error(f"Stream error: {e}")
                             break
-                await asyncio.sleep(0.04)  
+                # Sleep 0.05s = 20 FPS, phù hợp với ESP32-CAM
+                await asyncio.sleep(0.05)  
         except asyncio.CancelledError:
             # Request bị cancel (client disconnect)
             logger.info(f"Stream cancelled for device: {device_id}")
