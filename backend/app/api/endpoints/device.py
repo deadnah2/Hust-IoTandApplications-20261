@@ -87,6 +87,25 @@ async def camera_stream(
     
     # Lưu stream vào dict
     active_camera_streams[device_id] = stream
+    
+    # Background task để cập nhật FPS vào database mỗi 2 giây
+    async def update_fps_task():
+        while device_id in active_camera_streams:
+            try:
+                fps = stream.get_fps()
+                if fps > 0:
+                    # Cập nhật fps vào database
+                    from beanie import PydanticObjectId
+                    device_obj = await Device.get(PydanticObjectId(device_id))
+                    if device_obj:
+                        await device_obj.update({"$set": {"fps": fps}})
+                await asyncio.sleep(2)
+            except Exception as e:
+                logger.error(f"Error updating FPS: {e}")
+                break
+    
+    # Chạy background task
+    asyncio.create_task(update_fps_task())
 
     async def generate():
         try:

@@ -10,7 +10,7 @@ const room2: Room = { id: "r2", homeId: "h1", name: "Bedroom" };
 
 const devices: Device[] = [
   // Room 1: Camera + Light
-  { id: "d1", roomId: "r1", name: "Main Camera", type: "CAMERA", state: "ON", streamUrl: "", humanDetectionEnabled: false, bssid: "32:c5:1b:f7:65:fa", controllerMAC: "CAM_0001" },
+  { id: "d1", roomId: "r1", name: "Main Camera", type: "CAMERA", state: "ON", streamUrl: "", humanDetectionEnabled: false, bssid: "32:c5:1b:f7:65:fa", controllerMAC: "CAM_0001", cameraResolution: "QVGA", fps: 15.0 },
   { id: "d2", roomId: "r1", name: "Ceiling Light", type: "LIGHT", state: "OFF", bssid: "32:c5:1b:f7:65:fa", controllerMAC: "LIGHT_0001" },
   // Room 2: Fan + Light + Sensor
   { id: "d3", roomId: "r2", name: "Stand Fan", type: "FAN", state: "OFF", speed: 1, bssid: "32:c5:1b:f7:65:fa", controllerMAC: "FAN_0001" },

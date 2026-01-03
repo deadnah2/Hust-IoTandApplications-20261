@@ -39,6 +39,8 @@ export interface Device {
   speed?: number; // 1-3 for FAN
   streamUrl?: string; // For CAMERA
   humanDetectionEnabled?: boolean; // For CAMERA
+  cameraResolution?: string; // For CAMERA: 1080p, 720p, QVGA, ...
+  fps?: number; // For CAMERA: frames per second
   temperature?: number; // For SENSOR (°C)
   humidity?: number; // For SENSOR (%)
   temperatureThreshold?: number; // Ngưỡng cảnh báo nhiệt độ

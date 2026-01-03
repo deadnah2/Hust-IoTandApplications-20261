@@ -98,7 +98,7 @@ void MqttManager::reconnect() {
 
             // Publish device/new for Camera
             String streamUrl = "http://" + WiFi.localIP().toString() + "/stream";
-            publishDeviceNew("High quality camera", "CAMERA", WiFi.BSSIDstr(), deviceMac, "ONLINE", streamUrl);
+            publishDeviceNew("High quality camera", "CAMERA", WiFi.BSSIDstr(), deviceMac, "ONLINE", streamUrl, "QVGA");
             // Publish device/new for Light (Flash)
             String ledState = ledManager.getState() ? "ON" : "OFF";
             publishDeviceNew("Super bright light", "LIGHT", WiFi.BSSIDstr(), deviceMac, ledState);
@@ -130,7 +130,7 @@ bool MqttManager::isConnected() {
     return client.connected();
 }
 
-void MqttManager::publishDeviceNew(String name, String type, String bssid, String mac, String state, String streamUrl) {
+void MqttManager::publishDeviceNew(String name, String type, String bssid, String mac, String state, String streamUrl, String cameraResolution) {
     StaticJsonDocument<200> doc;
     doc["name"] = name;
     doc["type"] = type;
@@ -139,6 +139,9 @@ void MqttManager::publishDeviceNew(String name, String type, String bssid, Strin
     doc["state"] = state;
     if (streamUrl.length() > 0) {
         doc["streamUrl"] = streamUrl;
+    }
+    if (cameraResolution.length() > 0) {
+        doc["cameraResolution"] = cameraResolution;
     }
 
 
@@ -174,6 +177,7 @@ void MqttManager::publishDeviceStateForCamera() {
     StaticJsonDocument<256> doc;
     doc["name"] = "High quality camera";
     doc["state"] = "ON";
+    doc["cameraResolution"] = "QVGA";
 
     char buffer[300];
     serializeJson(doc, buffer);

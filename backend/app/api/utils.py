@@ -136,6 +136,8 @@ def device_to_response(device: Device) -> DeviceResponse:
         temperatureAlert=temperature_alert,
         lastSeen=device.lastSeen,
         isOnline=is_online,
+        cameraResolution=device.cameraResolution,
+        fps=device.fps,
         createdAt=device.createdAt,
         updatedAt=device.updatedAt
     )

@@ -124,7 +124,9 @@ export const CameraViewerDialog: React.FC<CameraViewerDialogProps> = ({
           <Box className="bg-slate-800/80 backdrop-blur p-4 flex flex-wrap justify-between items-center gap-4">
             <Box>
               <Typography className="text-white font-bold">{activeCamera.name}</Typography>
-              <Typography variant="caption" className="text-slate-400">1080p • 30fps • H.265</Typography>
+              <Typography variant="caption" className="text-slate-400">
+                {activeCamera.cameraResolution || 'Unknown'} • {activeCamera.fps ? `${activeCamera.fps.toFixed(1)}fps` : 'N/A'}
+              </Typography>
             </Box>
 
             <Box className="flex gap-2">

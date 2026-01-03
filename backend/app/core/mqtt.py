@@ -26,7 +26,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     topic = msg.topic
     payload = msg.payload.decode()
-    print(f"📩 MQTT [{topic}]: {payload[:100]}...")
+    # print(f"📩 MQTT [{topic}]: {payload[:100]}...")
     
     if topic == "device/new":
         # Schedule the async function in the event loop
@@ -90,7 +90,7 @@ async def add_device(payload: str):
         )
         if existing_device:
             update_fields = {}
-            for key in ("bssid", "state", "type", "name", "streamUrl", "humanDetectionEnabled", "speed"):
+            for key in ("bssid", "state", "type", "name", "streamUrl", "humanDetectionEnabled", "speed", "cameraResolution", "fps"):
                 if key in device_data:
                     update_fields[key] = device_data[key]
             from datetime import datetime

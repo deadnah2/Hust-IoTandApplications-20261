@@ -2,6 +2,7 @@ import cv2
 import threading
 import queue
 import time
+import torch
 from ultralytics import YOLO
 
 
@@ -28,7 +29,14 @@ class CameraStream:
         self.processedFrame = None
         self.frameLock = threading.Lock()
         self.modeLock = threading.Lock()  # Mutex cho humanDetectionMode
-        self.model = YOLO('yolo11n.pt')
+        self.current_fps = 0.0
+        self.fpsLock = threading.Lock()  # Mutex cho current_fps
+        
+        # Khởi tạo YOLO model với GPU nếu có
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.model = YOLO('yolo11s.pt')
+        self.model.to(self.device)
+        print(f"🔥 YOLO model loaded on: {self.device.upper()}")
 
 
     def start(self):
@@ -69,6 +77,11 @@ class CameraStream:
                 self.humanDetectionMode = enabled
                 print(f"🔄 Detection mode updated: {enabled}")
 
+    def get_fps(self) -> float:
+        """Lấy FPS hiện tại."""
+        with self.fpsLock:
+            return self.current_fps
+
     def _capture_frames(self):
         """Luồng lấy frame từ cameraUrl và put vào queue."""
         cap = cv2.VideoCapture(self.cameraUrl)
@@ -78,24 +91,24 @@ class CameraStream:
             return
 
         print(f"✅ Camera capture started: {self.cameraUrl}")
+        
         while self.running:
-            start_capture = time.time()
             ret, frame = cap.read()
-            capture_time = time.time() - start_capture
             if ret:
-                print(f"Captured frame at {time.strftime('%H:%M:%S', time.localtime())}, took {capture_time:.4f} seconds")
-                print(f"Queue size after capture: {self.frameQueue.qsize()}")
+                # Nếu queue đầy, bỏ frame cũ nhất và thêm frame mới
+                if self.frameQueue.full():
+                    try:
+                        self.frameQueue.get_nowait()  # Bỏ frame cũ
+                    except queue.Empty:
+                        pass
+                
                 try:
                     self.frameQueue.put(frame, timeout=1)
                 except queue.Full:
-                    try:
-                        self.frameQueue.get_nowait()
-                        self.frameQueue.put(frame)
-                    except queue.Empty:
-                        pass
+                    pass
             else:
                 print("⚠️ Failed to capture frame")
-                time.sleep(0.04)
+                time.sleep(0.05)
 
         cap.release()
         print("🛑 Camera capture thread stopped")
@@ -105,10 +118,14 @@ class CameraStream:
         with self.modeLock:
             initial_mode = self.humanDetectionMode
         print(f"✅ Detection thread started (mode: {initial_mode})")
+        
+        frame_count = 0
+        start_time = time.time()
+        
         while self.running:
             try:
                 frame = self.frameQueue.get(timeout=1)
-                start_detect = time.time()
+                frame_count += 1
                 processed_frame = frame.copy()
 
                 # Đọc humanDetectionMode với mutex
@@ -116,7 +133,7 @@ class CameraStream:
                     detection_enabled = self.humanDetectionMode
 
                 if detection_enabled and self.model:
-                    results = self.model(processed_frame, classes=[0])
+                    results = self.model(processed_frame, classes=[0], device=self.device, verbose=False)
                     human_detected = False
                     for result in results:
                         for box in result.boxes:
@@ -128,10 +145,21 @@ class CameraStream:
                     if human_detected:
                         print("🚨 Human detected!")
                 else:
-                    time.sleep(0.02)
+                    time.sleep(0.01)
 
-                detect_time = time.time() - start_detect
-                print(f"Detected frame at {time.strftime('%H:%M:%S', time.localtime())}, took {detect_time:.4f} seconds")
+                # Tính FPS mỗi 30 frames
+                if frame_count % 30 == 0:
+                    elapsed = time.time() - start_time
+                    fps = 30 / elapsed if elapsed > 0 else 0
+                    
+                    # Lưu FPS vào biến dùng chung với mutex
+                    with self.fpsLock:
+                        self.current_fps = fps
+                    
+                    detection_status = "ON" if detection_enabled else "OFF"
+                    # print(f"🔍 Detection FPS: {fps:.2f}, Mode: {detection_status}")
+                    frame_count = 0
+                    start_time = time.time()
 
                 with self.frameLock:
                     self.processedFrame = processed_frame

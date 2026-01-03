@@ -25,6 +25,8 @@ class Device(Document):
     speed: Optional[int] = 1 # For FAN: 1..3
     streamUrl: Optional[str] = None # For CAMERA
     humanDetectionEnabled: Optional[bool] = False
+    cameraResolution: Optional[str] = None  # For CAMERA: 1080p, 720p, ...
+    fps: Optional[float] = None  # For CAMERA: frames per second
     temperature: Optional[float] = None  # For SENSOR: °C
     humidity: Optional[float] = None  # For SENSOR: %
     temperatureThreshold: Optional[float] = None  # Ngưỡng cảnh báo nhiệt độ (°C)

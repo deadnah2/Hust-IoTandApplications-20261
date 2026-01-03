@@ -17,6 +17,8 @@ class DeviceCreate(BaseModel):
     speed: Optional[int] = 0
     streamUrl: Optional[str] = None
     humanDetectionEnabled: Optional[bool] = False
+    cameraResolution: Optional[str] = None
+    fps: Optional[float] = None
 
 class DeviceUpdate(BaseModel):
     custom_name: Optional[str] = None
@@ -40,6 +42,8 @@ class DeviceResponse(BaseModel):
     speed: Optional[int] = None
     humanDetectionEnabled: Optional[bool] = None
     streamUrl: Optional[str] = None
+    cameraResolution: Optional[str] = None
+    fps: Optional[float] = None
     temperature: Optional[float] = None
     humidity: Optional[float] = None
     temperatureThreshold: Optional[float] = None

@@ -13,7 +13,7 @@ public:
     void begin();
     void loop();
     bool isConnected();
-    void publishDeviceNew(String name, String type, String bssid, String mac, String state, String streamUrl = "");
+    void publishDeviceNew(String name, String type, String bssid, String mac, String state, String streamUrl = "", String cameraResolution = "");
     void publishData(String mac, String dataJson);
     void publishDeviceStateForLight();
     void publishDeviceStateForCamera();
