@@ -103,9 +103,6 @@ export const Dashboard = () => {
         open: false, message: "", severity: "warning"
     });
     const alertedDevicesRef = useRef<Set<string>>(new Set());
-    
-    // Track pending mutations to pause polling during device updates
-    const [isPendingMutation, setIsPendingMutation] = useState(false);
 
     const resetAddDeviceDialog = () => {
         setLanBssid("");
@@ -158,9 +155,8 @@ export const Dashboard = () => {
         queryKey: ['devices', selectedRoomId],
         queryFn: () => selectedRoomId ? api.devices.list(selectedRoomId) : Promise.resolve([]),
         enabled: !!selectedRoomId,
-        // Pause polling during mutations to prevent race conditions (button flickering)
-        refetchInterval: isPendingMutation ? false : 2000,
-        refetchIntervalInBackground: !isPendingMutation
+        refetchInterval: 2000,
+        refetchIntervalInBackground: true
     });
 
     // Check for alerts and show snackbar
@@ -208,43 +204,9 @@ export const Dashboard = () => {
             }
             return api.devices.control(vars.id, { action: action as any });
         },
-        onMutate: async (vars) => {
-            // Mark mutation as pending to pause polling
-            setIsPendingMutation(true);
-            
-            // Cancel outgoing refetches
-            await queryClient.cancelQueries({ queryKey: ['devices', selectedRoomId] });
-            
-            // Snapshot previous value
-            const previousDevices = queryClient.getQueryData(['devices', selectedRoomId]);
-            
-            // Optimistically update UI
-            queryClient.setQueryData(['devices', selectedRoomId], (old: Device[] | undefined) => {
-                if (!old) return old;
-                return old.map(d => 
-                    d.id === vars.id 
-                        ? { ...d, state: vars.state ? "ON" : "OFF" }
-                        : d
-                );
-            });
-            
-            return { previousDevices };
-        },
-        onError: (err, vars, context) => {
-            // Rollback on error
-            if (context?.previousDevices) {
-                queryClient.setQueryData(['devices', selectedRoomId], context.previousDevices);
-            }
-        },
-        onSettled: async () => {
-            // Wait a bit for server to fully process the command
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            // Refetch to sync with server state - only for current room
-            await queryClient.invalidateQueries({ queryKey: ['devices', selectedRoomId] });
-            
-            // Resume polling
-            setIsPendingMutation(false);
+        onSuccess: () => {
+            // Refetch để sync với server state
+            queryClient.invalidateQueries({ queryKey: ['devices', selectedRoomId] });
         }
     });
 

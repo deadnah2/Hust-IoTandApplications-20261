@@ -112,9 +112,9 @@ class DeviceService:
             
             # Update DB ngay để UI mượt (log sẽ được ghi trong device_to_response khi FE poll)
             update_data = {"updatedAt": datetime.utcnow()}
-            if command.action == "ON":
+            if command.action in ["ON", "LIGHT_ON", "CAMERA_ON"]:
                 update_data["state"] = "ON"
-            elif command.action == "OFF":
+            elif command.action in ["OFF", "LIGHT_OFF", "CAMERA_OFF"]:
                 update_data["state"] = "OFF"
             if command.speed is not None:
                 update_data["speed"] = command.speed
