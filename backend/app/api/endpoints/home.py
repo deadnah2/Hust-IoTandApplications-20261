@@ -5,6 +5,7 @@ from app.api.utils import home_to_response
 from app.models.user import User
 from app.schemas.home import HomeCreate, HomeUpdate, HomeResponse
 from app.services.home import HomeService
+from app.services.activity_log import ActivityLogService
 
 router = APIRouter()
 
@@ -14,6 +15,15 @@ async def create_home(
     current_user: User = Depends(deps.get_current_user)
 ):
     home = await HomeService.create_home(home_in, current_user)
+    
+    # Ghi log
+    await ActivityLogService.create_log(
+        action="CREATE_HOME",
+        message=f"Created home: {home.name}",
+        userId=str(current_user.id),
+        homeId=str(home.id)
+    )
+    
     return home_to_response(home)
 
 @router.get("/", response_model=List[HomeResponse])
@@ -55,10 +65,29 @@ async def delete_home(
     home_id: str,
     current_user: User = Depends(deps.get_current_user)
 ):
+    # Lấy thông tin home trước khi xóa để log
+    home = await HomeService.get_home_by_id(home_id, current_user)
+    if not home:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Home not found or you don't have permission"
+        )
+    
+    home_name = home.name
     success = await HomeService.delete_home(home_id, current_user)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Home not found or you don't have permission"
         )
+    
+    # Ghi log
+    await ActivityLogService.create_log(
+        action="DELETE_HOME",
+        message=f"Deleted home: {home_name}",
+        userId=str(current_user.id),
+        homeId=home_id
+    )
+    
     return {"message": "Home deleted successfully"}
+

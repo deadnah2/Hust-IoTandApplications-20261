@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Typography, Button, Tabs, Tab, Box, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Alert, CircularProgress,
-  List, ListItemButton, ListItemText, ListItemIcon, Radio
+  List, ListItemButton, ListItemText, ListItemIcon, Radio, Snackbar
 } from "@mui/material";
-import { Add, Refresh } from "@mui/icons-material";
+import { Add, Refresh, Warning } from "@mui/icons-material";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "../services/api";
@@ -18,9 +18,9 @@ import { createHomeSchema, createRoomSchema, Device, Room } from "../types";
 // --- Sub-components for Tabs ---
 
 const DevicesTab = ({
-    devices, isLoading, onToggle, onSpeed, onDelete, onViewCamera, onToggleDetection, onShowRecordings
+    devices, isLoading, onToggle, onSpeed, onDelete, onViewCamera, onToggleDetection, onShowRecordings, onSetThreshold
 }: {
-    devices: Device[], isLoading: boolean, onToggle: any, onSpeed: any, onDelete: any, onViewCamera: any, onToggleDetection: any, onShowRecordings: any
+    devices: Device[], isLoading: boolean, onToggle: any, onSpeed: any, onDelete: any, onViewCamera: any, onToggleDetection: any, onShowRecordings: any, onSetThreshold: any
 }) => {
     if (isLoading) return <Box className="flex justify-center p-10"><CircularProgress /></Box>;
     if (devices.length === 0) return <Alert severity="info">No devices in this room. Add one!</Alert>;
@@ -37,14 +37,20 @@ const DevicesTab = ({
                     onViewCamera={onViewCamera}
                     onToggleDetection={onToggleDetection}
                     onShowRecordings={onShowRecordings}
+                    onSetThreshold={onSetThreshold}
                 />
             ))}
         </div>
     );
 };
 
-const ActivityTab = () => {
-    const { data: logs } = useQuery({ queryKey: ['logs'], queryFn: api.logs.list, refetchInterval: 1500 });
+const ActivityTab = ({ homeId }: { homeId: string | null }) => {
+    const { data: logs } = useQuery({ 
+        queryKey: ['logs', homeId], 
+        queryFn: () => homeId ? api.logs.list(homeId) : Promise.resolve([]),
+        enabled: !!homeId,
+        refetchInterval: 3000
+    });
 
     return (
         <div className="bg-white rounded-lg shadow p-4">
@@ -91,6 +97,12 @@ export const Dashboard = () => {
     const [lanDevices, setLanDevices] = useState<Device[]>([]);
     const [selectedLanDeviceId, setSelectedLanDeviceId] = useState<string | null>(null);
     const [hasSearchedLan, setHasSearchedLan] = useState(false);
+    
+    // Alert snackbar state
+    const [alertSnackbar, setAlertSnackbar] = useState<{ open: boolean; message: string; severity: "warning" | "error" }>({
+        open: false, message: "", severity: "warning"
+    });
+    const alertedDevicesRef = useRef<Set<string>>(new Set());
 
     const resetAddDeviceDialog = () => {
         setLanBssid("");
@@ -139,13 +151,34 @@ export const Dashboard = () => {
         }
     }, [selectedHomeId, currentRooms, selectedRoomId]);
 
-    const { data: devices = [], isLoading: devicesLoading } = useQuery({
+    const { data: devices = [], isLoading: devicesLoading, refetch: refetchDevices } = useQuery({
         queryKey: ['devices', selectedRoomId],
         queryFn: () => selectedRoomId ? api.devices.list(selectedRoomId) : Promise.resolve([]),
         enabled: !!selectedRoomId,
-        refetchInterval: 2000000,
+        refetchInterval: 2000,
         refetchIntervalInBackground: true
     });
+
+    // Check for alerts and show snackbar
+    useEffect(() => {
+        devices.forEach(device => {
+            if (device.type === "SENSOR") {
+                const alertKey = `${device.id}-temp`;
+                
+                // Temperature alert
+                if (device.temperatureAlert && !alertedDevicesRef.current.has(alertKey)) {
+                    alertedDevicesRef.current.add(alertKey);
+                    setAlertSnackbar({
+                        open: true,
+                        message: `⚠️ ${device.name}: Temperature ${device.temperature?.toFixed(1)}°C exceeds threshold ${device.temperatureThreshold}°C!`,
+                        severity: "warning"
+                    });
+                } else if (!device.temperatureAlert) {
+                    alertedDevicesRef.current.delete(alertKey);
+                }
+            }
+        });
+    }, [devices]);
 
     // Mutations
     const addHomeMutation = useMutation({
@@ -171,7 +204,35 @@ export const Dashboard = () => {
             }
             return api.devices.control(vars.id, { action: action as any });
         },
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] })
+        onMutate: async (vars) => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({ queryKey: ['devices', selectedRoomId] });
+            
+            // Snapshot previous value
+            const previousDevices = queryClient.getQueryData(['devices', selectedRoomId]);
+            
+            // Optimistically update UI
+            queryClient.setQueryData(['devices', selectedRoomId], (old: Device[] | undefined) => {
+                if (!old) return old;
+                return old.map(d => 
+                    d.id === vars.id 
+                        ? { ...d, state: vars.state ? "ON" : "OFF" }
+                        : d
+                );
+            });
+            
+            return { previousDevices };
+        },
+        onError: (err, vars, context) => {
+            // Rollback on error
+            if (context?.previousDevices) {
+                queryClient.setQueryData(['devices', selectedRoomId], context.previousDevices);
+            }
+        },
+        onSettled: () => {
+            // Refetch to sync with server state
+            queryClient.invalidateQueries({ queryKey: ['devices'] });
+        }
     });
 
     const speedMutation = useMutation({
@@ -183,6 +244,12 @@ export const Dashboard = () => {
     const detectionMutation = useMutation({
         mutationFn: (vars: { id: string, enabled: boolean }) =>
             api.devices.toggleHumanDetection(vars.id, vars.enabled),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] })
+    });
+
+    const thresholdMutation = useMutation({
+        mutationFn: (vars: { id: string, temperatureThreshold: number | null }) =>
+            api.devices.setThreshold(vars.id, vars.temperatureThreshold),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] })
     });
 
@@ -290,6 +357,9 @@ export const Dashboard = () => {
     };
     const handleSpeed = (id: string, speed: number) => speedMutation.mutate({ id, speed });
     const handleDetection = (id: string, enabled: boolean) => detectionMutation.mutate({ id, enabled });
+    const handleSetThreshold = (id: string, tempThreshold: number | null) => {
+        thresholdMutation.mutate({ id, temperatureThreshold: tempThreshold });
+    };
     const handleDelete = (id: string) => deleteDeviceMutation.mutate(id);
     const handleDeleteHome = (id: string) => deleteHomeMutation.mutate(id);
     const handleDeleteRoom = (id: string) => deleteRoomMutation.mutate(id);
@@ -447,10 +517,11 @@ export const Dashboard = () => {
                             onViewCamera={handleViewCamera}
                             onToggleDetection={handleDetection}
                             onShowRecordings={handleShowRecordings}
+                            onSetThreshold={handleSetThreshold}
                         />
                     )}
 
-                    {tabIndex === 1 && <ActivityTab />}
+                    {tabIndex === 1 && <ActivityTab homeId={selectedHomeId} />}
                 </>
             )}
 
@@ -596,6 +667,23 @@ export const Dashboard = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Alert Snackbar for sensor threshold warnings */}
+            <Snackbar
+                open={alertSnackbar.open}
+                autoHideDuration={6000}
+                onClose={() => setAlertSnackbar(prev => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+                <Alert 
+                    onClose={() => setAlertSnackbar(prev => ({ ...prev, open: false }))}
+                    severity={alertSnackbar.severity}
+                    variant="filled"
+                    sx={{ width: '100%' }}
+                >
+                    {alertSnackbar.message}
+                </Alert>
+            </Snackbar>
         </Layout>
     );
 };

@@ -66,14 +66,18 @@ void initCamera() {
 
     // if PSRAM IC present, init with UXGA resolution and higher compression
     if(psramFound()){
-        config.frame_size = FRAMESIZE_UXGA;
-        config.jpeg_quality = 10;
-        config.fb_count = 2;
+        config.frame_size = FRAMESIZE_VGA;  // 640x480 - Cân bằng giữa chất lượng và tốc độ
+        config.jpeg_quality = 15;            // 10-63, cao hơn = nén nhiều hơn = nhanh hơn
+        config.fb_count = 2;                 // 2 buffer đủ cho streaming (2 frame trong RAM)
     } else {
-        config.frame_size = FRAMESIZE_SVGA;
-        config.jpeg_quality = 12;
+        config.frame_size = FRAMESIZE_QVGA;  // 320x240 - Nhẹ hơn nếu không có PSRAM
+        config.jpeg_quality = 18;
         config.fb_count = 1;
     }
+
+    Serial.printf("Frame size: ", config.frame_size);
+    Serial.printf("JPEG quality: ", config.jpeg_quality);
+    Serial.printf("FB count: ", config.fb_count);
 
     // camera init
     esp_err_t err = esp_camera_init(&config);

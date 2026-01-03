@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardContent, Typography, Switch, Slider, Box, IconButton, Menu, MenuItem, Button, Tooltip } from "@mui/material";
+import { Card, CardContent, Typography, Switch, Slider, Box, IconButton, Menu, MenuItem, Button, Tooltip, TextField, Chip } from "@mui/material";
 import { 
   MoreVert, 
   Lightbulb, 
@@ -8,9 +8,12 @@ import {
   FiberManualRecord, 
   Security, 
   Thermostat, 
-  WaterDrop 
+  WaterDrop,
+  Warning
 } from "@mui/icons-material";
 import { Device } from "../types";
+import { api } from "../services/api";
+import { USE_MOCK, USE_MOCK_DEVICES } from "../constants";
 
 interface DeviceCardProps {
   device: Device;
@@ -20,12 +23,16 @@ interface DeviceCardProps {
   onViewCamera?: (id: string) => void;
   onToggleDetection?: (id: string, enabled: boolean) => void;
   onShowRecordings?: (device: Device) => void;
+  onSetThreshold?: (id: string, tempThreshold: number | null) => void;
 }
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({
-  device, onToggle, onSpeedChange, onDelete, onViewCamera, onToggleDetection, onShowRecordings
+  device, onToggle, onSpeedChange, onDelete, onViewCamera, onToggleDetection, onShowRecordings, onSetThreshold
 }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [tempThreshold, setTempThreshold] = React.useState<string>(
+    device.temperatureThreshold?.toString() ?? ""
+  );
   const open = Boolean(anchorEl);
   const formatValue = (value?: number, suffix = "") => {
     if (typeof value !== "number" || !Number.isFinite(value)) return `--${suffix}`;
@@ -107,19 +114,21 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   disabled={isFanOffline}
                 />
               </div>
-              <div className="px-2">
-                 <Typography variant="caption" className="text-gray-500">Speed: {device.speed}</Typography>
-                 <Slider
-                    disabled={device.state === "OFF" || isFanOffline}
-                    value={device.speed || 0}
-                    min={0}
-                    max={3}
-                    step={1}
-                    marks
-                    onChange={(_, val) => onSpeedChange(device.id, val as number)}
-                    size="small"
-                  />
-              </div>
+              {/* Chỉ hiện speed slider khi FAN đang ON */}
+              {device.state === "ON" && !isFanOffline && (
+                <div className="px-2">
+                   <Typography variant="caption" className="text-gray-500">Speed: {device.speed}</Typography>
+                   <Slider
+                      value={device.speed || 1}
+                      min={1}
+                      max={3}
+                      step={1}
+                      marks
+                      onChange={(_, val) => onSpeedChange(device.id, val as number)}
+                      size="small"
+                    />
+                </div>
+              )}
               {isFanOffline && (
                 <Typography variant="caption" className="text-center block text-red-500">
                   No data (offline)
@@ -131,7 +140,15 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
           {device.type === "CAMERA" && (
             <div className="space-y-3">
               <div className="w-full h-32 bg-black rounded-lg flex items-center justify-center relative overflow-hidden group border border-slate-200">
-                 <img src={`https://picsum.photos/400/300?random=${device.id}`} alt="cam" className="opacity-60 object-cover w-full h-full" />
+                 <img 
+                   src={
+                     USE_MOCK || USE_MOCK_DEVICES
+                       ? `https://picsum.photos/400/300?random=${device.id}`
+                       : api.devices.getCameraStreamUrl(device.id)
+                   } 
+                   alt="cam" 
+                   className="opacity-60 object-cover w-full h-full" 
+                 />
                  
                  <div className="absolute top-2 left-2 flex gap-1">
                    {device.state === 'ON' && (
@@ -166,15 +183,34 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
           {device.type === "SENSOR" && (
             <div className="mt-2">
+              {/* Alert badge */}
+              {device.temperatureAlert && (
+                <div className="flex gap-1 mb-2 flex-wrap">
+                  <Chip 
+                    icon={<Warning className="text-orange-600" />} 
+                    label={`Temp > ${device.temperatureThreshold}°C`}
+                    size="small" 
+                    color="warning"
+                    className="animate-pulse"
+                  />
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-2">
-                <Box className={`p-3 rounded-xl flex flex-col items-center justify-center border ${isSensorOffline ? "bg-gray-50 border-gray-200" : "bg-orange-50 border-orange-100"}`}>
-                  <Thermostat className={isSensorOffline ? "text-gray-400 mb-1" : "text-orange-500 mb-1"} fontSize="small" />
-                  <Typography variant="h6" className={isSensorOffline ? "font-bold text-gray-500 leading-none" : "font-bold text-orange-700 leading-none"}>
-                    {formatValue(sensorTemp, "C")}
+                <Box className={`p-3 rounded-xl flex flex-col items-center justify-center border ${
+                  isSensorOffline ? "bg-gray-50 border-gray-200" : 
+                  device.temperatureAlert ? "bg-red-50 border-red-300 animate-pulse" : 
+                  "bg-orange-50 border-orange-100"
+                }`}>
+                  <Thermostat className={isSensorOffline ? "text-gray-400 mb-1" : device.temperatureAlert ? "text-red-500 mb-1" : "text-orange-500 mb-1"} fontSize="small" />
+                  <Typography variant="h6" className={isSensorOffline ? "font-bold text-gray-500 leading-none" : device.temperatureAlert ? "font-bold text-red-700 leading-none" : "font-bold text-orange-700 leading-none"}>
+                    {formatValue(sensorTemp, "°C")}
                   </Typography>
-                  <Typography variant="caption" className={isSensorOffline ? "text-gray-500 mt-1" : "text-orange-600 mt-1"}>Temp</Typography>
+                  <Typography variant="caption" className={isSensorOffline ? "text-gray-500 mt-1" : device.temperatureAlert ? "text-red-600 mt-1" : "text-orange-600 mt-1"}>Temp</Typography>
                 </Box>
-                <Box className={`p-3 rounded-xl flex flex-col items-center justify-center border ${isSensorOffline ? "bg-gray-50 border-gray-200" : "bg-blue-50 border-blue-100"}`}>
+                <Box className={`p-3 rounded-xl flex flex-col items-center justify-center border ${
+                  isSensorOffline ? "bg-gray-50 border-gray-200" : "bg-blue-50 border-blue-100"
+                }`}>
                   <WaterDrop className={isSensorOffline ? "text-gray-400 mb-1" : "text-blue-500 mb-1"} fontSize="small" />
                   <Typography variant="h6" className={isSensorOffline ? "font-bold text-gray-500 leading-none" : "font-bold text-blue-700 leading-none"}>
                     {formatValue(sensorHumidity, "%")}
@@ -182,6 +218,31 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   <Typography variant="caption" className={isSensorOffline ? "text-gray-500 mt-1" : "text-blue-600 mt-1"}>Humidity</Typography>
                 </Box>
               </div>
+              
+              {/* Threshold settings */}
+              {!isSensorOffline && (
+                <div className="mt-3 p-2 bg-gray-50 rounded-lg">
+                  <Typography variant="caption" className="text-gray-600 font-medium block mb-2">
+                    ⚠️ Temperature Alert Threshold
+                  </Typography>
+                  <TextField
+                    size="small"
+                    label="Temp (°C)"
+                    type="number"
+                    value={tempThreshold}
+                    onChange={(e) => setTempThreshold(e.target.value)}
+                    onBlur={() => {
+                      if (onSetThreshold) {
+                        const temp = tempThreshold ? parseFloat(tempThreshold) : null;
+                        onSetThreshold(device.id, temp);
+                      }
+                    }}
+                    inputProps={{ step: 0.5, min: 0, max: 100 }}
+                    fullWidth
+                  />
+                </div>
+              )}
+              
               {isSensorOffline && (
                 <Typography variant="caption" className="text-center block text-red-500 mt-2">
                   No data (offline)

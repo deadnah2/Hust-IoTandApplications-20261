@@ -36,11 +36,13 @@ export interface Device {
   type: DeviceType;
   state: DeviceState;
   isOnline?: boolean;
-  speed?: number; // 0-3 for FAN
+  speed?: number; // 1-3 for FAN
   streamUrl?: string; // For CAMERA
   humanDetectionEnabled?: boolean; // For CAMERA
   temperature?: number; // For SENSOR (°C)
   humidity?: number; // For SENSOR (%)
+  temperatureThreshold?: number; // Ngưỡng cảnh báo nhiệt độ
+  temperatureAlert?: boolean; // Cảnh báo nhiệt độ cao
   lastSeen?: string;
   createdAt?: string;
   updatedAt?: string;

@@ -39,6 +39,17 @@ class CameraStream:
         self.detectionThread.start()
         print("CameraStream started")
 
+    def stop(self):
+        """Dừng các luồng capture và detection."""
+        if not self.running:
+            return
+        self.running = False
+        if self.captureThread:
+            self.captureThread.join(timeout=2)
+        if self.detectionThread:
+            self.detectionThread.join(timeout=2)
+        print("CameraStream stopped")
+
     def get_processed_frame(self):
         """Lấy frame đã được xử lý (processed frame) từ bên ngoài."""
         with self.frameLock:  # Đồng bộ truy cập
@@ -69,7 +80,7 @@ class CameraStream:
                         pass
             else:
                 print("Failed to capture frame")
-                time.sleep(0.1)  # Tránh loop quá nhanh
+                time.sleep(0.05)  # Tránh loop quá nhanh
 
         cap.release()
 

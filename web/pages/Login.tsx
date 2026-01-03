@@ -17,6 +17,9 @@ export const Login = () => {
     mutationFn: api.auth.login,
     onSuccess: (data) => {
       localStorage.setItem("id_token", data.id_token);
+      if (data.refresh_token) {
+        localStorage.setItem("refresh_token", data.refresh_token);
+      }
       navigate(ROUTES.APP);
     },
     onError: (err: any) => setError(err.response?.data?.detail || err.message || "Login failed"),

@@ -158,11 +158,14 @@ async def update_device_data(device_id: str, payload: str):
                     update_fields["state"] = "ON"
                 elif state in ("OFFLINE", "OFF"):
                     update_fields["state"] = "OFF"
-            if "speed" in data:
+            # Chỉ update speed nếu > 0 (khi OFF, ESP32 gửi speed=0, bỏ qua để giữ speed cũ)
+            if "speed" in data and data["speed"] > 0:
                 update_fields["speed"] = data["speed"]
 
             await device.update({"$set": update_fields})
             print(f"Device {device_id} data updated: {update_fields}")
+            
+            # NOTE: Log được ghi trong device_to_response() khi FE poll
         else:
             print(f"Device not found: {device_id}")
 

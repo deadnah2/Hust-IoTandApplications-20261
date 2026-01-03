@@ -9,6 +9,7 @@ from app.models.device import Device
 from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceResponse, DeviceCommand, NewDeviceInLAN
 from app.services.device import DeviceService
 from app.services.camera import CameraStream
+from app.services.activity_log import ActivityLogService
 from app.api.utils import device_to_response
 import asyncio
 import cv2
@@ -36,36 +37,6 @@ async def get_unassigned_devices(
     devices = await Device.find(Device.roomId == None).to_list()
     return [device_to_response(device) for device in devices]
 
-@router.get("/camera-stream")
-async def camera_stream(
-    device_id: str,
-    current_user: User = Depends(deps.get_current_user)
-):
-    device = await DeviceService.get_device_by_id(device_id, current_user)
-    if not device or not device.streamUrl:
-        raise HTTPException(
-            status_code=404,
-            detail="Device not found or no stream URL"
-        )
-
-    # Khởi tạo CameraStream với detection bật
-    stream = CameraStream(device.streamUrl, humanDetectionMode=True)
-    stream.start()
-
-    async def generate():
-        try:
-            while True:
-                frame = stream.get_processed_frame()
-                if frame is not None:
-                    ret, buffer = cv2.imencode('.jpg', frame)
-                    if ret:
-                        yield (b'--frame\r\n'
-                               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-                await asyncio.sleep(0.1)  # Tránh loop quá nhanh
-        finally:
-            stream.stop()
-
-    return StreamingResponse(generate(), media_type='multipart/x-mixed-replace; boundary=frame')
 
 # Generic endpoints AFTER specific ones
 # for testing
@@ -90,6 +61,44 @@ async def read_devices(
     devices = await DeviceService.get_devices_by_room(roomId, current_user)
     return [device_to_response(device) for device in devices]
 
+# Camera stream - phải đặt TRƯỚC /{device_id} để tránh conflict
+@router.get("/camera-stream")
+async def camera_stream(
+    device_id: str,
+    current_user: User = Depends(deps.get_current_user_from_query)
+):
+    device = await DeviceService.get_device_by_id(device_id, current_user)
+    if not device or not device.streamUrl:
+        raise HTTPException(
+            status_code=404,
+            detail="Device not found or no stream URL"
+        )
+
+    # Khởi tạo CameraStream với detection bật
+    stream = CameraStream(device.streamUrl, humanDetectionMode=False)
+    stream.start()
+
+    async def generate():
+        try:
+            while stream.running:  # Kiểm tra stream.running thay vì while True
+                frame = stream.get_processed_frame()
+                if frame is not None:
+                    ret, buffer = cv2.imencode('.jpg', frame)
+                    if ret:
+                        try:
+                            yield (b'--frame\r\n'
+                                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+                            # Client đã ngắt kết nối
+                            logger.info(f"Client disconnected from camera stream: {device_id}")
+                            break
+                await asyncio.sleep(0.05)  # QUAN TRỌNG: Cho phép event loop xử lý request khác
+        finally:
+            stream.stop()
+            logger.info(f"Camera stream stopped for device: {device_id}")
+
+    return StreamingResponse(generate(), media_type='multipart/x-mixed-replace; boundary=frame')
+
 @router.get("/{device_id}", response_model=DeviceResponse)
 async def read_device(
     device_id: str,
@@ -109,12 +118,34 @@ async def update_device(
     device_in: DeviceUpdate,
     current_user: User = Depends(deps.get_current_user)
 ):
+    # Lấy device trước để check roomId cũ
+    old_device = await DeviceService.get_device_by_id(device_id, current_user)
+    if not old_device:
+        raise HTTPException(
+            status_code=404,
+            detail="Device not found or you don't have permission"
+        )
+    old_room_id = old_device.roomId
+    
     device = await DeviceService.update_device(device_id, device_in, current_user)
     if not device:
         raise HTTPException(
             status_code=404,
             detail="Device not found or you don't have permission"
         )
+    
+    # Ghi log nếu add device vào room (roomId từ None → có giá trị)
+    if device_in.roomId and device.roomId and old_room_id is None:
+        from app.services.room import RoomService
+        room = await RoomService.get_room_by_id(str(device.roomId), current_user)
+        if room:
+            await ActivityLogService.create_log(
+                action="ADD_DEVICE",
+                message=f"Added device {device.name} to room {room.name}",
+                userId=str(current_user.id),
+                homeId=str(room.homeId)
+            )
+    
     return device_to_response(device)
 
 @router.delete("/{device_id}")
@@ -122,12 +153,36 @@ async def delete_device(
     device_id: str,
     current_user: User = Depends(deps.get_current_user)
 ):
+    # Lấy thông tin device trước khi xóa
+    device = await DeviceService.get_device_by_id(device_id, current_user)
+    if not device:
+        raise HTTPException(
+            status_code=404,
+            detail="Device not found or you don't have permission"
+        )
+    
+    device_name = device.name
+    room_id = device.roomId
+    
     success = await DeviceService.delete_device(device_id, current_user)
     if not success:
         raise HTTPException(
             status_code=404,
             detail="Device not found or you don't have permission"
         )
+    
+    # Ghi log nếu device có trong room
+    if room_id:
+        from app.services.room import RoomService
+        room = await RoomService.get_room_by_id(str(room_id), current_user)
+        if room:
+            await ActivityLogService.create_log(
+                action="REMOVE_DEVICE",
+                message=f"Removed device {device_name} from room {room.name}",
+                userId=str(current_user.id),
+                homeId=str(room.homeId)
+            )
+    
     return {"message": "Device deleted successfully"}
 
 @router.post("/{device_id}/command")
