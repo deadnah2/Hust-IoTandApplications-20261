@@ -161,6 +161,9 @@ async def update_device_data(device_id: str, payload: str):
             # Chỉ update speed nếu > 0 (khi OFF, ESP32 gửi speed=0, bỏ qua để giữ speed cũ)
             if "speed" in data and data["speed"] > 0:
                 update_fields["speed"] = data["speed"]
+            # Update camera resolution if present
+            if "cameraResolution" in data:
+                update_fields["cameraResolution"] = data["cameraResolution"]
 
             await device.update({"$set": update_fields})
             print(f"Device {device_id} data updated: {update_fields}")

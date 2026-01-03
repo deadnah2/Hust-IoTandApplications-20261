@@ -7,7 +7,7 @@ from ultralytics import YOLO
 
 
 class CameraStream:
-    def __init__(self, cameraUrl, deviceId, frameQueueSize=4, humanDetectionMode=False):
+    def __init__(self, cameraUrl, deviceId, frameQueueSize=8, humanDetectionMode=False):
         """
         Khởi tạo CameraStream.
 
