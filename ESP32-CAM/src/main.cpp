@@ -124,9 +124,9 @@ void loop() {
         digitalWrite(RED_LED_PIN, HIGH); // Tắt đèn đỏ (Pin 33) khi đã kết nối (HIGH là tắt)
         mqttManager.loop();
 
-        // Publish device state every 10 seconds
+        // Publish device state every 2 seconds (giống FAN để sync nhanh hơn)
         unsigned long now = millis();
-        if (now - lastMsg > 10000) {
+        if (now - lastMsg > 2000) {
             lastMsg = now;
             mqttManager.publishDeviceStateForLight();
             mqttManager.publishDeviceStateForCamera();

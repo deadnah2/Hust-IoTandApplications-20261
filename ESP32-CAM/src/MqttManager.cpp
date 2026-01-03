@@ -53,12 +53,12 @@ void MqttManager::handleMqttMessage(char* topic, byte* payload, unsigned int len
     // Xử lý lệnh LED
     if (strcmp(action, "LIGHT_ON") == 0) {
         ledManager.on();
-        // publishLedState();
+        publishDeviceStateForLight();  // ✅ Publish state ngay sau khi thay đổi
         Serial.println("✅ LED ON");
 
     } else if (strcmp(action, "LIGHT_OFF") == 0) {
         ledManager.off();
-        // publishLedState();
+        publishDeviceStateForLight();  // ✅ Publish state ngay sau khi thay đổi
         Serial.println("✅ LED OFF");
 
     } else {
