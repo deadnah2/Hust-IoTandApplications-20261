@@ -43,12 +43,16 @@ class CameraStream:
         """Dừng các luồng capture và detection."""
         if not self.running:
             return
+        print(f"🛑 Stopping CameraStream for {self.cameraUrl}")
         self.running = False
-        if self.captureThread:
-            self.captureThread.join(timeout=2)
-        if self.detectionThread:
-            self.detectionThread.join(timeout=2)
-        print("CameraStream stopped")
+        
+        # Đợi threads kết thúc
+        if self.captureThread and self.captureThread.is_alive():
+            self.captureThread.join(timeout=3)
+        if self.detectionThread and self.detectionThread.is_alive():
+            self.detectionThread.join(timeout=3)
+        
+        print("✅ CameraStream stopped successfully")
 
     def get_processed_frame(self):
         """Lấy frame đã được xử lý (processed frame) từ bên ngoài."""
@@ -59,9 +63,11 @@ class CameraStream:
         """Luồng lấy frame từ cameraUrl và put vào queue."""
         cap = cv2.VideoCapture(self.cameraUrl)
         if not cap.isOpened():
-            print(f"Cannot open camera stream: {self.cameraUrl}")
+            print(f"❌ Cannot open camera stream: {self.cameraUrl}")
+            self.running = False
             return
 
+        print(f"✅ Camera capture started: {self.cameraUrl}")
         while self.running:
             start_capture = time.time()
             ret, frame = cap.read()
@@ -70,56 +76,51 @@ class CameraStream:
                 print(f"Captured frame at {time.strftime('%H:%M:%S', time.localtime())}, took {capture_time:.4f} seconds")
                 print(f"Queue size after capture: {self.frameQueue.qsize()}")
                 try:
-                    self.frameQueue.put(frame, timeout=1)  # Đặt timeout để không block vĩnh viễn
+                    self.frameQueue.put(frame, timeout=1)
                 except queue.Full:
-                    # Nếu queue đầy, bỏ frame cũ nhất và thêm frame mới
                     try:
                         self.frameQueue.get_nowait()
                         self.frameQueue.put(frame)
                     except queue.Empty:
                         pass
             else:
-                print("Failed to capture frame")
-                time.sleep(0.05)  # Tránh loop quá nhanh
+                print("⚠️ Failed to capture frame")
+                time.sleep(0.05)
 
         cap.release()
+        print("🛑 Camera capture thread stopped")
 
     def _detect_humans(self):
         """Luồng thực hiện detection trên frame từ queue."""
+        print(f"✅ Detection thread started (mode: {self.humanDetectionMode})")
         while self.running:
             try:
                 frame = self.frameQueue.get(timeout=1)
                 start_detect = time.time()
-                processed_frame = frame.copy()  # Sao chép frame để xử lý
+                processed_frame = frame.copy()
 
                 if self.humanDetectionMode and self.model:
-                    # Chạy YOLO detection
-                    results = self.model(processed_frame, classes=[0])  # Chỉ detect class 'person' (0 trong COCO)
-
-                    # Xử lý kết quả và vẽ bounding box
-                    human_detected = False # xem trong ảnh có người không
+                    results = self.model(processed_frame, classes=[0])
+                    human_detected = False
                     for result in results:
                         for box in result.boxes:
-                            if box.cls == 0:  # person
+                            if box.cls == 0:
                                 human_detected = True
-                                # Vẽ bounding box
                                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                                 cv2.rectangle(processed_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                                 cv2.putText(processed_frame, "Person", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
                     if human_detected:
-                        print("Human detected!") # Dùng MQTT để gửi cho server
-                # if self.humanDetectionMode:
-                #     self.model = YOLO('yolov8n.pt')
-                # else:
-                #     self.model = None 
+                        print("🚨 Human detected!")
+                else:
+                    time.sleep(0.03)
 
                 detect_time = time.time() - start_detect
                 print(f"Detected frame at {time.strftime('%H:%M:%S', time.localtime())}, took {detect_time:.4f} seconds")
 
-                # Lưu processed frame
                 with self.frameLock:
                     self.processedFrame = processed_frame
 
             except queue.Empty:
                 continue
+        
+        print("🛑 Detection thread stopped")

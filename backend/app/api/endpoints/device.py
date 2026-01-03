@@ -80,7 +80,7 @@ async def camera_stream(
 
     async def generate():
         try:
-            while stream.running:  # Kiểm tra stream.running thay vì while True
+            while stream.running:
                 frame = stream.get_processed_frame()
                 if frame is not None:
                     ret, buffer = cv2.imencode('.jpg', frame)
@@ -88,14 +88,22 @@ async def camera_stream(
                         try:
                             yield (b'--frame\r\n'
                                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-                        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+                        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError) as e:
                             # Client đã ngắt kết nối
-                            logger.info(f"Client disconnected from camera stream: {device_id}")
+                            logger.info(f"Client disconnected from camera stream: {device_id} - {e}")
                             break
-                await asyncio.sleep(0.05)  # QUAN TRỌNG: Cho phép event loop xử lý request khác
+                        except Exception as e:
+                            logger.error(f"Stream error: {e}")
+                            break
+                await asyncio.sleep(0.05)  # ~30fps
+        except asyncio.CancelledError:
+            # Request bị cancel (client disconnect)
+            logger.info(f"Stream cancelled for device: {device_id}")
+        except Exception as e:
+            logger.error(f"Unexpected error in stream: {e}")
         finally:
             stream.stop()
-            logger.info(f"Camera stream stopped for device: {device_id}")
+            logger.info(f"✅ Camera stream stopped and cleaned up for device: {device_id}")
 
     return StreamingResponse(generate(), media_type='multipart/x-mixed-replace; boundary=frame')
 

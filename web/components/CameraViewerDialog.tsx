@@ -22,10 +22,18 @@ export const CameraViewerDialog: React.FC<CameraViewerDialogProps> = ({
   open, onClose, cameras, initialCameraId, onToggleRecording, onToggleDetection, onShowRecordings
 }) => {
   const [activeCamId, setActiveCamId] = useState<string | null>(initialCameraId);
+  const [streamKey, setStreamKey] = useState(0); // Key để force re-render image
 
   useEffect(() => {
     if (initialCameraId) setActiveCamId(initialCameraId);
   }, [initialCameraId]);
+
+  // Force unmount image khi dialog đóng hoặc đổi camera
+  useEffect(() => {
+    if (open) {
+      setStreamKey(prev => prev + 1);
+    }
+  }, [open, activeCamId]);
 
   const activeCamera = cameras.find(c => c.id === activeCamId) || cameras[0];
 
@@ -78,15 +86,18 @@ export const CameraViewerDialog: React.FC<CameraViewerDialogProps> = ({
         {/* Viewport */}
         <Box className="flex-1 flex flex-col bg-black relative">
           <Box className="flex-1 relative overflow-hidden flex items-center justify-center">
-            <img
-              src={
-                USE_MOCK || USE_MOCK_DEVICES
-                  ? `https://picsum.photos/1280/720?random=${activeCamera.id}`
-                  : api.devices.getCameraStreamUrl(activeCamera.id)
-              }
-              alt="Live"
-              className="w-full h-full object-contain opacity-90"
-            />
+            {open && (
+              <img
+                key={streamKey} // Force unmount/remount khi streamKey thay đổi
+                src={
+                  USE_MOCK || USE_MOCK_DEVICES
+                    ? `https://picsum.photos/1280/720?random=${activeCamera.id}`
+                    : api.devices.getCameraStreamUrl(activeCamera.id)
+                }
+                alt="Live"
+                className="w-full h-full object-contain opacity-90"
+              />
+            )}
             <Box className="absolute top-4 left-4 flex gap-2">
               <Chip
                 label="LIVE"
