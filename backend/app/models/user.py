@@ -8,7 +8,7 @@ class User(Document):
     email: Optional[Indexed(EmailStr, unique=True)] = None
     passwordHash: str
     home_ids: Optional[List[PydanticObjectId]] = None
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(default_factory=datetime.now)
 
     class Settings:
         name = "users"

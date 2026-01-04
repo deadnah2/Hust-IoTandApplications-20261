@@ -9,17 +9,17 @@ class Home(Document):
     name: str
     location: Optional[str] = None
     bssid: Optional[str] = None  # WiFi BSSID for device discovery
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(default_factory=datetime.now)
+    updatedAt: datetime = Field(default_factory=datetime.now)
 
     @before_event(Insert)
     def set_creation_date(self):
-        self.createdAt = datetime.utcnow()
+        self.createdAt = datetime.now()
         self.updatedAt = self.createdAt
 
     @before_event(Replace)
     def set_update_date(self):
-        self.updatedAt = datetime.utcnow()
+        self.updatedAt = datetime.now()
 
     class Settings:
         name = "homes"

@@ -45,7 +45,7 @@ class HomeService:
         home = await HomeService.get_home_by_id(home_id, user)
         if home:
             update_data = home_in.model_dump(exclude_unset=True)
-            update_data["updatedAt"] = datetime.utcnow()
+            update_data["updatedAt"] = datetime.now()
             await home.update({"$set": update_data})
             for key, value in update_data.items():
                 setattr(home, key, value)
@@ -70,7 +70,7 @@ class HomeService:
             if room_ids:
                 devices = await Device.find(In(Device.roomId, room_ids)).to_list()
                 for device in devices:
-                    await device.update({"$set": {"roomId": None, "updatedAt": datetime.utcnow()}})
+                    await device.update({"$set": {"roomId": None, "updatedAt": datetime.now()}})
             
             # Delete all rooms
             for room in rooms:

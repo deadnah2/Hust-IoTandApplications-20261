@@ -94,7 +94,7 @@ async def add_device(payload: str):
                 if key in device_data:
                     update_fields[key] = device_data[key]
             from datetime import datetime
-            now = datetime.utcnow()
+            now = datetime.now()
             update_fields["lastSeen"] = now
             update_fields["updatedAt"] = now
             await existing_device.update({"$set": update_fields})
@@ -106,7 +106,7 @@ async def add_device(payload: str):
         if new_device and new_device.controllerMAC:
             print(f"New device added: {new_device.name}")
             from datetime import datetime
-            now = datetime.utcnow()
+            now = datetime.now()
             await new_device.update({"$set": {"lastSeen": now, "updatedAt": now}})
             # Subscribe to device's data topic
             topic = f"device/data/{new_device.controllerMAC}"
@@ -141,7 +141,7 @@ async def update_device_data(device_id: str, payload: str):
 
         if device:
             from datetime import datetime
-            now = datetime.utcnow()
+            now = datetime.now()
             update_fields = {
                 "lastSeen": now,
                 "updatedAt": now,

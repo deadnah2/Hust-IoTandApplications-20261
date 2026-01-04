@@ -14,7 +14,7 @@ class ActivityLog(Document):
     type: str = Field(default=LogType.INFO)
     action: str  # "LOGIN", "CREATE_HOME", "DELETE_HOME", "CREATE_ROOM", etc.
     message: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=datetime.now)
 
     class Settings:
         name = "activity_logs"
