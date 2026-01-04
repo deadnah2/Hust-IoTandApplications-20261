@@ -26,11 +26,14 @@ class CameraStream:
         self.detectionThread = None
         self.running = False
 
-        self.processedFrame = None
-        self.frameLock = threading.Lock()
+        self.processedFrameQueue = queue.Queue(maxsize=2)  # Queue cho processed frames
         self.modeLock = threading.Lock()  # Mutex cho humanDetectionMode
         self.current_fps = 0.0
         self.fpsLock = threading.Lock()  # Mutex cho current_fps
+        
+        # FPS tracking cho consumer (streaming endpoint)
+        self.consumer_frame_count = 0
+        self.consumer_start_time = time.time()
         
         # Khởi tạo YOLO model với GPU nếu có
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -67,8 +70,34 @@ class CameraStream:
 
     def get_processed_frame(self):
         """Lấy frame đã được xử lý (processed frame) từ bên ngoài."""
-        with self.frameLock:  # Đồng bộ truy cập
-            return self.processedFrame.copy() if self.processedFrame is not None else None
+        try:
+            # Lấy frame mới nhất, non-blocking
+            frame = None
+            frames_consumed = 0
+            # Đọc hết queue để lấy frame mới nhất
+            while not self.processedFrameQueue.empty():
+                try:
+                    frame = self.processedFrameQueue.get_nowait()
+                    frames_consumed += 1
+                except queue.Empty:
+                    break
+            
+            # Cập nhật FPS dựa trên số frame consumer lấy ra
+            if frame is not None and frames_consumed > 0:
+                with self.fpsLock:
+                    self.consumer_frame_count += frames_consumed
+                    # Tính FPS mỗi 30 frames
+                    if self.consumer_frame_count >= 30:
+                        elapsed = time.time() - self.consumer_start_time
+                        if elapsed > 0:
+                            self.current_fps = 30 / elapsed
+                            # print(f"📊 Consumer FPS: {self.current_fps:.2f}")
+                        self.consumer_frame_count = 0
+                        self.consumer_start_time = time.time()
+            
+            return frame.copy() if frame is not None else None
+        except Exception:
+            return None
 
     def set_detection_mode(self, enabled: bool):
         """Cập nhật humanDetectionMode từ bên ngoài."""
@@ -119,13 +148,9 @@ class CameraStream:
             initial_mode = self.humanDetectionMode
         print(f"✅ Detection thread started (mode: {initial_mode})")
         
-        frame_count = 0
-        start_time = time.time()
-        
         while self.running:
             try:
                 frame = self.frameQueue.get(timeout=1)
-                frame_count += 1
                 processed_frame = frame.copy()
 
                 # Đọc humanDetectionMode với mutex
@@ -147,22 +172,16 @@ class CameraStream:
                 else:
                     time.sleep(0.01)
 
-                # Tính FPS mỗi 30 frames
-                if frame_count % 30 == 0:
-                    elapsed = time.time() - start_time
-                    fps = 30 / elapsed if elapsed > 0 else 0
-                    
-                    # Lưu FPS vào biến dùng chung với mutex
-                    with self.fpsLock:
-                        self.current_fps = fps
-                    
-                    detection_status = "ON" if detection_enabled else "OFF"
-                    # print(f"🔍 Detection FPS: {fps:.2f}, Mode: {detection_status}")
-                    frame_count = 0
-                    start_time = time.time()
-
-                with self.frameLock:
-                    self.processedFrame = processed_frame
+                # Put frame vào queue, nếu đầy thì bỏ frame cũ
+                if self.processedFrameQueue.full():
+                    try:
+                        self.processedFrameQueue.get_nowait()
+                    except queue.Empty:
+                        pass
+                try:
+                    self.processedFrameQueue.put_nowait(processed_frame)
+                except queue.Full:
+                    pass
 
             except queue.Empty:
                 continue
