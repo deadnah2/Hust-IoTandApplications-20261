@@ -125,7 +125,7 @@ async def camera_stream(
                         except Exception as e:
                             logger.error(f"Stream error: {e}")
                             break
-                # Sleep 0.05s = 20 FPS, phù hợp với ESP32-CAM
+                
                 await asyncio.sleep(0.05)  
         except asyncio.CancelledError:
             # Request bị cancel (client disconnect)

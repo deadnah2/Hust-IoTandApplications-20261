@@ -12,7 +12,7 @@ HUMAN_DETECTION_COOLDOWN = 30  # Chỉ log 1 lần mỗi 30 giây
 
 
 class CameraStream:
-    def __init__(self, cameraUrl, deviceId, frameQueueSize=8, humanDetectionMode=False):
+    def __init__(self, cameraUrl, deviceId, frameQueueSize=2, humanDetectionMode=False):
         """
         Khởi tạo CameraStream.
 
@@ -31,7 +31,7 @@ class CameraStream:
         self.detectionThread = None
         self.running = False
 
-        self.processedFrameQueue = queue.Queue(maxsize=2)  # Queue cho processed frames
+        self.processedFrameQueue = queue.Queue(maxsize=4)  # Queue cho processed frames
         self.modeLock = threading.Lock()  # Mutex cho humanDetectionMode
         self.current_fps = 0.0
         self.fpsLock = threading.Lock()  # Mutex cho current_fps
@@ -152,7 +152,7 @@ class CameraStream:
                     pass
             else:
                 print("⚠️ Failed to capture frame")
-                time.sleep(0.03)
+                time.sleep(0.01)
 
         cap.release()
         print("🛑 Camera capture thread stopped")
@@ -173,6 +173,9 @@ class CameraStream:
                     detection_enabled = self.humanDetectionMode
 
                 if detection_enabled and self.model:
+                    # Start timing inference + drawing
+                    inference_start = time.time()
+                    
                     results = self.model(processed_frame, classes=[0], device=self.device, verbose=False)
                     human_detected = False
                     for result in results:
@@ -182,6 +185,10 @@ class CameraStream:
                                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                                 cv2.rectangle(processed_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                                 cv2.putText(processed_frame, "Person", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    
+                    # End timing and log
+                    inference_time = time.time() - inference_start
+                    print("Inference time: ", inference_time)
                     if human_detected:
                         print("🚨 Human detected!")
                         # Log human detection với cooldown để tránh spam
