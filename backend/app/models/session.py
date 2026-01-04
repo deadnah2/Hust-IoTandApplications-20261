@@ -6,7 +6,7 @@ class Session(Document):
     userId: Indexed(PydanticObjectId)
     refreshToken: Indexed(str, unique=True)
     expiresAt: datetime
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(default_factory=datetime.utcnow)  # Keep UTC for consistency with JWT
 
     class Settings:
         name = "sessions"

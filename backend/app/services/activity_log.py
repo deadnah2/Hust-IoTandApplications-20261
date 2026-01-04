@@ -19,7 +19,7 @@ class ActivityLogService:
             userId=PydanticObjectId(userId) if userId else None,
             homeId=PydanticObjectId(homeId) if homeId else None,
             type=log_type,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now()
         )
         await log.create()
         return log

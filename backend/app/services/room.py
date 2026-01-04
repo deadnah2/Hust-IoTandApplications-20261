@@ -45,7 +45,7 @@ class RoomService:
         room = await RoomService.get_room_by_id(room_id, user)
         if room:
             update_data = room_in.model_dump(exclude_unset=True)
-            update_data["updatedAt"] = datetime.utcnow()
+            update_data["updatedAt"] = datetime.now()
             await room.update({"$set": update_data})
             for key, value in update_data.items():
                 setattr(room, key, value)
@@ -58,7 +58,7 @@ class RoomService:
             # Unassign all devices in this room before deleting
             devices = await Device.find(Device.roomId == PydanticObjectId(room_id)).to_list()
             for device in devices:
-                await device.update({"$set": {"roomId": None, "updatedAt": datetime.utcnow()}})
+                await device.update({"$set": {"roomId": None, "updatedAt": datetime.now()}})
             
             await room.delete()
             return True

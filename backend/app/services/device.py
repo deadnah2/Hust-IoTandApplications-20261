@@ -65,7 +65,7 @@ class DeviceService:
             return None
 
         update_data = device_in.model_dump(exclude_unset=True)
-        update_data["updatedAt"] = datetime.utcnow()
+        update_data["updatedAt"] = datetime.now()
 
         if "roomId" in update_data and update_data["roomId"]:
             # Verify new room ownership
@@ -86,7 +86,7 @@ class DeviceService:
             return False
 
         # Instead of deleting the device, just remove it from the room
-        update_data = {"roomId": None, "updatedAt": datetime.utcnow()}
+        update_data = {"roomId": None, "updatedAt": datetime.now()}
         await device.update({"$set": update_data})
         setattr(device, "roomId", None)
         setattr(device, "updatedAt", update_data["updatedAt"])
@@ -102,7 +102,7 @@ class DeviceService:
         if command.action == "CAMERA_MODE":
             update_data = {
                 "humanDetectionEnabled": command.humanDetectionEnabled,
-                "updatedAt": datetime.utcnow()
+                "updatedAt": datetime.now()
             }
             await device.update({"$set": update_data})
             
@@ -126,7 +126,7 @@ class DeviceService:
             publish_command(device.controllerMAC, mqtt_command)
             
             # Update DB ngay để UI mượt (log sẽ được ghi trong device_to_response khi FE poll)
-            update_data = {"updatedAt": datetime.utcnow()}
+            update_data = {"updatedAt": datetime.now()}
             if command.action in ["ON", "LIGHT_ON", "CAMERA_ON"]:
                 update_data["state"] = "ON"
             elif command.action in ["OFF", "LIGHT_OFF", "CAMERA_OFF"]:

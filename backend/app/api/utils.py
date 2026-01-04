@@ -46,7 +46,7 @@ def device_to_response(device: Device) -> DeviceResponse:
         if device.lastSeen is None:
             is_online = False
         else:
-            delta = datetime.utcnow() - device.lastSeen
+            delta = datetime.now() - device.lastSeen
             is_online = delta.total_seconds() <= DEVICE_OFFLINE_SECONDS
         
         # Check và log thay đổi online/offline

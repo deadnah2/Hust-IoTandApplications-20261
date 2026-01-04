@@ -31,8 +31,8 @@ class Device(Document):
     humidity: Optional[float] = None  # For SENSOR: %
     temperatureThreshold: Optional[float] = None  # Ngưỡng cảnh báo nhiệt độ (°C)
     lastSeen: Optional[datetime] = None
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(default_factory=datetime.now)
+    updatedAt: datetime = Field(default_factory=datetime.now)
 
     class Settings:
         name = "devices"
